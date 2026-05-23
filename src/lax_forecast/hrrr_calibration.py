@@ -98,18 +98,33 @@ class HRRRCalibrator:
         ensemble_mean: float,
         ensemble_spread: float,
         *,
+        regime: str | None = None,
         smoothing_eps: float = 0.0,
     ) -> DistributionSummary:
-        """predicted actuals = mean + max(spread, floor) * z over historical z."""
+        """predicted actuals = mean + max(spread, floor) * z over the chosen residuals.
+
+        regime is None -> pooled residuals; a well-supported regime -> its bucket;
+        a thin/unknown regime -> warn and use pooled."""
+        if regime is None:
+            z = self._z
+        elif regime in self._z_by_regime:
+            z = self._z_by_regime[regime]
+        else:
+            warnings.warn(
+                f"regime {regime!r} has insufficient/no training support; "
+                "using pooled residuals",
+                stacklevel=2,
+            )
+            z = self._z
         s = float(ensemble_spread)
         if not np.isfinite(s) or s < 0:
             s = 0.0
         s_eff = max(s, self._spread_floor)
-        predicted = float(ensemble_mean) + s_eff * self._z
+        predicted = float(ensemble_mean) + s_eff * z
         return _bin_to_distribution(predicted, smoothing_eps=smoothing_eps)
 
     def calibrate_ensemble(
-        self, ens: HRRREnsemble, *, smoothing_eps: float = 0.0
+        self, ens: HRRREnsemble, *, regime: str | None = None, smoothing_eps: float = 0.0
     ) -> DistributionSummary:
         """Convenience: pull mean/spread off the ensemble and calibrate."""
         if ens.n_members < 2:
@@ -118,7 +133,9 @@ class HRRRCalibrator:
                 "spread floored",
                 stacklevel=2,
             )
-        return self.calibrate(ens.mean, ens.spread, smoothing_eps=smoothing_eps)
+        return self.calibrate(
+            ens.mean, ens.spread, regime=regime, smoothing_eps=smoothing_eps
+        )
 
     def summary(self) -> pd.DataFrame:
         """Diagnostics: n_obs, mean residual bias (°F), and z-distribution quantiles."""

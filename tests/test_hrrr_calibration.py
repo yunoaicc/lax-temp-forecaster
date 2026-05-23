@@ -201,3 +201,31 @@ def test_regime_support_reports_well_supported_only():
 def test_constructor_without_regime_column_has_no_buckets():
     calib = hc.HRRRCalibrator(_training_table([-1.0, 0.0, 1.0, 2.0]), min_obs=3)
     assert calib.regime_support() == {}
+
+
+def test_calibrate_regime_buckets_differ():
+    table = _training_table_with_regime({"stratus": [-4.0] * 6, "clear": [2.0] * 6}, spread=1.0)
+    calib = hc.HRRRCalibrator(table, min_obs=3, min_regime_obs=3)
+    m_stratus = calib.calibrate(70.0, 1.0, regime="stratus").mean
+    m_clear = calib.calibrate(70.0, 1.0, regime="clear").mean
+    m_pooled = calib.calibrate(70.0, 1.0).mean
+    assert m_stratus == pytest.approx(66.0)        # 70 + 1*(-4)
+    assert m_clear == pytest.approx(72.0)          # 70 + 1*(+2)
+    assert m_stratus < m_pooled < m_clear          # pooled mean z = -1 -> 69
+
+
+def test_calibrate_unknown_regime_falls_back_to_pooled_with_warning():
+    table = _training_table_with_regime({"stratus": [-4.0] * 6, "clear": [2.0] * 6}, spread=1.0)
+    calib = hc.HRRRCalibrator(table, min_obs=3, min_regime_obs=3)
+    with pytest.warns(UserWarning, match="pooled"):
+        d = calib.calibrate(70.0, 1.0, regime="santa_ana")
+    assert d.mean == pytest.approx(calib.calibrate(70.0, 1.0).mean)
+
+
+def test_calibrate_backcompat_regime_without_buckets():
+    calib = hc.HRRRCalibrator(_training_table([-1.0, 0.0, 1.0, 2.0]), min_obs=3)
+    pooled = calib.calibrate(70.0, 1.0)
+    with pytest.warns(UserWarning, match="pooled"):
+        d = calib.calibrate(70.0, 1.0, regime="stratus")
+    np.testing.assert_allclose(d.probs, pooled.probs)
+    np.testing.assert_array_equal(d.temps_f, pooled.temps_f)

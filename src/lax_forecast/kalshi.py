@@ -63,3 +63,20 @@ def add_edges(df: pd.DataFrame, *, min_edge_cents: int = 2) -> pd.DataFrame:
     )
     out["flagged"] = (best >= min_edge_cents).fillna(False)
     return out.sort_values("best_edge", ascending=False, na_position="last").reset_index(drop=True)
+
+
+@dataclass(frozen=True)
+class KalshiAuth:
+    key_id: str
+    private_key_pem: str
+
+    @classmethod
+    def from_env(cls) -> "KalshiAuth":
+        """Read KALSHI_API_KEY_ID and KALSHI_PRIVATE_KEY_PATH from the environment."""
+        key_id = os.environ.get("KALSHI_API_KEY_ID")
+        if not key_id:
+            raise ValueError("KALSHI_API_KEY_ID is not set")
+        key_path = os.environ.get("KALSHI_PRIVATE_KEY_PATH")
+        if not key_path:
+            raise ValueError("KALSHI_PRIVATE_KEY_PATH is not set")
+        return cls(key_id=key_id, private_key_pem=Path(key_path).read_text())

@@ -77,3 +77,20 @@ def test_add_edges_sorts_by_best_edge_desc():
 def test_add_edges_rejects_missing_columns():
     with pytest.raises(ValueError):
         kalshi.add_edges(pd.DataFrame({"fair_cents": [50]}), min_edge_cents=2)
+
+
+def test_kalshi_auth_from_env(tmp_path, monkeypatch):
+    key_file = tmp_path / "key.pem"
+    key_file.write_text("PEM-CONTENTS")
+    monkeypatch.setenv("KALSHI_API_KEY_ID", "kid-123")
+    monkeypatch.setenv("KALSHI_PRIVATE_KEY_PATH", str(key_file))
+    auth = kalshi.KalshiAuth.from_env()
+    assert auth.key_id == "kid-123"
+    assert auth.private_key_pem == "PEM-CONTENTS"
+
+
+def test_kalshi_auth_from_env_missing_raises(monkeypatch):
+    monkeypatch.delenv("KALSHI_API_KEY_ID", raising=False)
+    monkeypatch.delenv("KALSHI_PRIVATE_KEY_PATH", raising=False)
+    with pytest.raises(ValueError, match="KALSHI_API_KEY_ID"):
+        kalshi.KalshiAuth.from_env()

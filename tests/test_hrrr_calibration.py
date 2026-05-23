@@ -91,3 +91,28 @@ def test_calibrate_preserves_left_skew():
     lower = d.quantile(0.50) - d.quantile(0.05)
     upper = d.quantile(0.95) - d.quantile(0.50)
     assert lower > upper  # left tail longer
+
+
+def _ensemble(values_f, target=dt.date(2026, 6, 15)):
+    from lax_forecast import hrrr
+    members = [
+        hrrr.HRRRMember(dt.datetime(2026, 6, 15, 6 + i, tzinfo=UTC), target, v, 8, 14)
+        for i, v in enumerate(values_f)
+    ]
+    return hrrr.HRRREnsemble(target, members)
+
+
+def test_calibrate_ensemble_matches_calibrate():
+    calib = hc.HRRRCalibrator(_training_table([-1.0, 0.0, 1.0, 2.0]), min_obs=3)
+    ens = _ensemble([68.0, 70.0, 72.0])  # mean 70, spread = std([68,70,72]) = 1.633
+    from_ens = calib.calibrate_ensemble(ens)
+    direct = calib.calibrate(ens.mean, ens.spread)
+    np.testing.assert_array_equal(from_ens.temps_f, direct.temps_f)
+    np.testing.assert_allclose(from_ens.probs, direct.probs)
+
+
+def test_calibrate_ensemble_warns_on_single_member():
+    calib = hc.HRRRCalibrator(_training_table([-1.0, 0.0, 1.0, 2.0]), min_obs=3)
+    ens = _ensemble([70.0])  # 1 member -> spread 0
+    with pytest.warns(UserWarning, match="member"):
+        calib.calibrate_ensemble(ens)

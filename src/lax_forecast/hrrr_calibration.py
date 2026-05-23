@@ -89,3 +89,15 @@ class HRRRCalibrator:
         s_eff = max(s, self._spread_floor)
         predicted = float(ensemble_mean) + s_eff * self._z
         return _bin_to_distribution(predicted, smoothing_eps=smoothing_eps)
+
+    def calibrate_ensemble(
+        self, ens: HRRREnsemble, *, smoothing_eps: float = 0.0
+    ) -> DistributionSummary:
+        """Convenience: pull mean/spread off the ensemble and calibrate."""
+        if ens.n_members < 2:
+            warnings.warn(
+                f"ensemble for {ens.target_date} has {ens.n_members} member(s); "
+                "spread floored",
+                stacklevel=2,
+            )
+        return self.calibrate(ens.mean, ens.spread, smoothing_eps=smoothing_eps)

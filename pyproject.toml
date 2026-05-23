@@ -30,6 +30,9 @@ hrrr = [
     "xarray>=2024.1.0",
     "cfgrib>=0.9.10",
 ]
+kalshi = [
+    "cryptography>=42.0",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

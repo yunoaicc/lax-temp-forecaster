@@ -154,3 +154,28 @@ def fetch_quotes(
             warnings.warn(f"skipping quote for {ticker}: {exc}", stacklevel=2)
             continue
     return out
+
+
+def find_edges(
+    dist: DistributionSummary,
+    contracts: Iterable[Contract],
+    ticker_map: dict[str, str],
+    *,
+    fetcher=fetch_quotes,
+    auth: KalshiAuth | None = None,
+    min_edge_cents: int = 2,
+) -> pd.DataFrame:
+    """Price contracts, attach tickers via ticker_map, fetch quotes, join, add edges.
+
+    Contracts whose label is absent from ticker_map are dropped with a warning.
+    A ticker with no returned quote yields a NaN-quote row (kept, not flagged)."""
+    book = price_book(dist, contracts).copy()
+    book["ticker"] = book["label"].map(ticker_map)
+    missing = book["ticker"].isna()
+    for lbl in book.loc[missing, "label"]:
+        warnings.warn(f"no ticker for contract {lbl!r}; dropping", stacklevel=2)
+    book = book[~missing].reset_index(drop=True)
+
+    quotes = fetcher(book["ticker"].tolist(), auth=auth)
+    merged = book.merge(quotes_to_frame(quotes), on="ticker", how="left")
+    return add_edges(merged, min_edge_cents=min_edge_cents)

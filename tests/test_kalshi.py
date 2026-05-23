@@ -109,3 +109,54 @@ def test_require_cryptography_raises_clear_error(monkeypatch):
     monkeypatch.setattr(kalshi.importlib, "import_module", fake_import)
     with pytest.raises(ImportError, match=r"\[kalshi\]"):
         kalshi._require_cryptography()
+
+
+def _dist(temps, probs):
+    return DistributionSummary(temps_f=np.array(temps), probs=np.array(probs))
+
+
+def test_find_edges_joins_and_flags_offline():
+    dist = _dist([60, 61, 62], [0.2, 0.5, 0.3])  # p(>61)=0.3 -> 30¢; p(<61)=0.2 -> 20¢
+    contracts = [pricing.Contract.greater(61), pricing.Contract.less(61)]
+    ticker_map = {"> 61": "T-GT61", "< 61": "T-LT61"}
+
+    def fake_fetcher(tickers, *, auth=None):
+        quotes = {
+            "T-GT61": kalshi.Quote("T-GT61", yes_bid=15, yes_ask=20),
+            "T-LT61": kalshi.Quote("T-LT61", yes_bid=35, yes_ask=40),
+        }
+        return [quotes[t] for t in tickers]
+
+    out = kalshi.find_edges(dist, contracts, ticker_map, fetcher=fake_fetcher, min_edge_cents=2)
+    by_label = out.set_index("label")
+    assert by_label.loc["> 61", "side"] == "buy"
+    assert by_label.loc["> 61", "buy_edge"] == pytest.approx(10)
+    assert by_label.loc["< 61", "side"] == "sell"
+    assert by_label.loc["< 61", "sell_edge"] == pytest.approx(15)
+    assert bool(by_label.loc["> 61", "flagged"]) is True
+
+
+def test_find_edges_drops_contract_without_ticker():
+    dist = _dist([60, 61, 62], [0.2, 0.5, 0.3])
+    contracts = [pricing.Contract.greater(61), pricing.Contract.less(61)]
+    ticker_map = {"> 61": "T-GT61"}  # no ticker for "< 61"
+
+    def fake_fetcher(tickers, *, auth=None):
+        return [kalshi.Quote("T-GT61", yes_bid=15, yes_ask=20)]
+
+    with pytest.warns(UserWarning, match="no ticker"):
+        out = kalshi.find_edges(dist, contracts, ticker_map, fetcher=fake_fetcher)
+    assert set(out["label"]) == {"> 61"}
+
+
+def test_find_edges_missing_quote_row_kept_not_flagged():
+    dist = _dist([60, 61, 62], [0.2, 0.5, 0.3])
+    contracts = [pricing.Contract.greater(61)]
+    ticker_map = {"> 61": "T-GT61"}
+
+    def empty_fetcher(tickers, *, auth=None):
+        return []  # ticker requested but no quote returned
+
+    out = kalshi.find_edges(dist, contracts, ticker_map, fetcher=empty_fetcher)
+    assert set(out["label"]) == {"> 61"}
+    assert bool(out.iloc[0]["flagged"]) is False

@@ -44,3 +44,17 @@ def test_condition_above_support_is_point_mass():
     c = nc.condition_on_observed(d, 70)
     assert list(c.temps_f) == [70]
     assert c.probs.tolist() == [1.0]
+
+
+def test_max_temp_f_converts_and_maxes():
+    assert nc._max_temp_f([20.0, 25.0, 22.0]) == 77      # 25°C -> 77°F
+    assert nc._max_temp_f([0.0]) == 32                   # 0°C -> 32°F
+
+
+def test_max_temp_f_ignores_none():
+    assert nc._max_temp_f([None, 25.0, None]) == 77
+
+
+def test_max_temp_f_empty_or_all_none_is_none():
+    assert nc._max_temp_f([]) is None
+    assert nc._max_temp_f([None, None]) is None

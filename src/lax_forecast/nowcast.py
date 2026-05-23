@@ -41,3 +41,12 @@ def condition_on_observed(
             temps_f=np.array([int(round(obs))]), probs=np.array([1.0])
         )
     return DistributionSummary(temps_f=temps.copy(), probs=new_probs / total)
+
+
+def _max_temp_f(temps_c: Iterable[float | None]) -> float | None:
+    """Drop None readings; return max(°C) converted to °F and rounded to int,
+    or None if there are no valid readings."""
+    vals = [t for t in temps_c if t is not None]
+    if not vals:
+        return None
+    return int(round(max(vals) * 9.0 / 5.0 + 32.0))

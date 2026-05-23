@@ -50,3 +50,40 @@ def _max_temp_f(temps_c: Iterable[float | None]) -> float | None:
     if not vals:
         return None
     return int(round(max(vals) * 9.0 / 5.0 + 32.0))
+
+
+def fetch_observed_high(
+    target_date: dt.date,
+    *,
+    as_of: dt.datetime | None = None,
+    session=None,
+) -> float | None:
+    """KLAX observed max (°F, int) for target_date's local hours up to as_of, via
+    api.weather.gov station observations. None if there are no observations. A fetch
+    failure is warned and returns None (degrade to the prior). NETWORK."""
+    import requests
+
+    as_of = as_of or dt.datetime.now(UTC)
+    as_of = as_of if as_of.tzinfo else as_of.replace(tzinfo=UTC)
+    start_local = dt.datetime.combine(target_date, dt.time(0, 0), tzinfo=PACIFIC)
+    start_utc = start_local.astimezone(UTC)
+    end_utc = min(as_of, (start_local + dt.timedelta(days=1)).astimezone(UTC))
+
+    s = session or requests.Session()
+    s.headers.update({"User-Agent": USER_AGENT, "Accept": "application/geo+json"})
+    try:
+        r = s.get(
+            f"{NWS_API_BASE}/stations/{KLAX_STATION}/observations",
+            params={"start": start_utc.isoformat(), "end": end_utc.isoformat()},
+            timeout=30,
+        )
+        r.raise_for_status()
+        features = r.json().get("features", [])
+    except Exception as exc:
+        warnings.warn(f"failed to fetch KLAX observations: {exc}", stacklevel=2)
+        return None
+
+    temps_c = [
+        f.get("properties", {}).get("temperature", {}).get("value") for f in features
+    ]
+    return _max_temp_f(temps_c)

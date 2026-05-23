@@ -58,3 +58,58 @@ def test_max_temp_f_ignores_none():
 def test_max_temp_f_empty_or_all_none_is_none():
     assert nc._max_temp_f([]) is None
     assert nc._max_temp_f([None, None]) is None
+
+
+class _FakeResp:
+    def __init__(self, payload):
+        self._p = payload
+
+    def raise_for_status(self):
+        pass
+
+    def json(self):
+        return self._p
+
+
+class _FakeSession:
+    def __init__(self, payload=None, raise_exc=None):
+        self.headers = {}
+        self._payload = payload
+        self._raise = raise_exc
+        self.last_params = None
+
+    def get(self, url, params=None, timeout=None):
+        self.last_params = params
+        if self._raise is not None:
+            raise self._raise
+        return _FakeResp(self._payload)
+
+
+def test_fetch_observed_high_parses_max():
+    payload = {"features": [
+        {"properties": {"temperature": {"value": 20.0}}},
+        {"properties": {"temperature": {"value": 25.0}}},
+        {"properties": {"temperature": {"value": None}}},
+    ]}
+    sess = _FakeSession(payload=payload)
+    out = nc.fetch_observed_high(
+        dt.date(2026, 6, 15), as_of=dt.datetime(2026, 6, 15, 20, tzinfo=UTC), session=sess
+    )
+    assert out == 77  # 25°C -> 77°F
+
+
+def test_fetch_observed_high_no_observations_is_none():
+    sess = _FakeSession(payload={"features": []})
+    out = nc.fetch_observed_high(
+        dt.date(2026, 6, 15), as_of=dt.datetime(2026, 6, 15, 20, tzinfo=UTC), session=sess
+    )
+    assert out is None
+
+
+def test_fetch_observed_high_degrades_on_error():
+    sess = _FakeSession(raise_exc=RuntimeError("boom"))
+    with pytest.warns(UserWarning, match="observations"):
+        out = nc.fetch_observed_high(
+            dt.date(2026, 6, 15), as_of=dt.datetime(2026, 6, 15, 20, tzinfo=UTC), session=sess
+        )
+    assert out is None

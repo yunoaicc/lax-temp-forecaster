@@ -113,3 +113,25 @@ def test_fetch_observed_high_degrades_on_error():
             dt.date(2026, 6, 15), as_of=dt.datetime(2026, 6, 15, 20, tzinfo=UTC), session=sess
         )
     assert out is None
+
+
+def test_nowcast_conditions_on_fetched_value():
+    d = _dist([60, 61, 62, 63, 64], [0.2] * 5)
+
+    def fake_fetcher(target_date, *, as_of=None):
+        return 62
+
+    out = nc.nowcast(d, target_date=dt.date(2026, 6, 15), fetcher=fake_fetcher)
+    expected = nc.condition_on_observed(d, 62)
+    assert np.array_equal(out.temps_f, expected.temps_f)
+    assert np.allclose(out.probs, expected.probs)
+
+
+def test_nowcast_unchanged_when_no_observations():
+    d = _dist([60, 61, 62], [0.3, 0.4, 0.3])
+
+    def none_fetcher(target_date, *, as_of=None):
+        return None
+
+    out = nc.nowcast(d, target_date=dt.date(2026, 6, 15), fetcher=none_fetcher)
+    assert out is d  # same object, unchanged

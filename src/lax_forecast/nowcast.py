@@ -87,3 +87,20 @@ def fetch_observed_high(
         f.get("properties", {}).get("temperature", {}).get("value") for f in features
     ]
     return _max_temp_f(temps_c)
+
+
+def nowcast(
+    dist: DistributionSummary,
+    *,
+    target_date: dt.date | None = None,
+    as_of: dt.datetime | None = None,
+    fetcher=fetch_observed_high,
+) -> DistributionSummary:
+    """Fetch the observed max-so-far and condition the distribution on it.
+    If the fetcher returns None (no observations yet), return dist unchanged."""
+    if target_date is None:
+        target_date = dt.datetime.now(PACIFIC).date()
+    observed = fetcher(target_date, as_of=as_of)
+    if observed is None:
+        return dist
+    return condition_on_observed(dist, observed)

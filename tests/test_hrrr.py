@@ -97,3 +97,34 @@ def test_fxx_covering_target_empty_when_out_of_range():
     # 2026-06-16 04:00 PDT, so it cannot cover all of 2026-06-17.
     init = dt.datetime(2026, 6, 15, 17, tzinfo=UTC)
     assert hrrr.fxx_covering_target(init, dt.date(2026, 6, 17)) == []
+
+
+def test_select_runs_same_day_uses_recent_hourly():
+    # as_of 2026-06-15 18:00 UTC, target same day. Window 13-16 PDT = 20:00-23:00 UTC.
+    # Most recent 3 hourly runs all reach it -> [16:00, 17:00, 18:00] UTC.
+    as_of = dt.datetime(2026, 6, 15, 18, tzinfo=UTC)
+    runs = hrrr.select_run_init_times(dt.date(2026, 6, 15), as_of, max_members=3)
+    assert runs == [
+        dt.datetime(2026, 6, 15, 16, tzinfo=UTC),
+        dt.datetime(2026, 6, 15, 17, tzinfo=UTC),
+        dt.datetime(2026, 6, 15, 18, tzinfo=UTC),
+    ]
+
+
+def test_select_runs_next_day_uses_6hourly_extended_runs():
+    # as_of 2026-06-15 18:00 UTC, target NEXT day. Only 00/06/12/18Z (f48) runs
+    # reach 2026-06-16 afternoon; f18 hourly runs do not.
+    as_of = dt.datetime(2026, 6, 15, 18, tzinfo=UTC)
+    runs = hrrr.select_run_init_times(dt.date(2026, 6, 16), as_of, max_members=3)
+    assert runs == [
+        dt.datetime(2026, 6, 15, 6, tzinfo=UTC),
+        dt.datetime(2026, 6, 15, 12, tzinfo=UTC),
+        dt.datetime(2026, 6, 15, 18, tzinfo=UTC),
+    ]
+
+
+def test_select_runs_excludes_runs_after_as_of():
+    as_of = dt.datetime(2026, 6, 15, 18, 30, tzinfo=UTC)
+    runs = hrrr.select_run_init_times(dt.date(2026, 6, 15), as_of, max_members=12)
+    assert all(r <= as_of for r in runs)
+    assert max(runs) == dt.datetime(2026, 6, 15, 18, tzinfo=UTC)

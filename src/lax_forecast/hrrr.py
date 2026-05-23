@@ -90,6 +90,33 @@ def fxx_covering_target(
     return out
 
 
+def select_run_init_times(
+    target_date: dt.date,
+    as_of: dt.datetime,
+    *,
+    max_members: int = DEFAULT_MAX_MEMBERS,
+    max_window: tuple[int, int] = MAX_WINDOW,
+    lookback_hours: int = 72,
+) -> list[dt.datetime]:
+    """The most recent <=max_members hourly HRRR runs (init <= as_of) whose
+    forecast range fully covers target_date's afternoon max window. Ascending."""
+    as_of_utc = _as_utc(as_of)
+    win_start = dt.datetime.combine(target_date, dt.time(max_window[0]), tzinfo=PACIFIC).astimezone(UTC)
+    win_end = dt.datetime.combine(target_date, dt.time(max_window[1]), tzinfo=PACIFIC).astimezone(UTC)
+    top_of_hour = as_of_utc.replace(minute=0, second=0, microsecond=0)
+
+    selected: list[dt.datetime] = []
+    for hours_back in range(0, lookback_hours + 1):
+        init = top_of_hour - dt.timedelta(hours=hours_back)
+        fmax = expected_max_fxx(init.hour)
+        covers = init <= win_start and (init + dt.timedelta(hours=fmax)) >= win_end
+        if covers:
+            selected.append(init)
+        if len(selected) >= max_members:
+            break
+    return sorted(selected)
+
+
 @dataclass
 class HRRRMember:
     init_time: dt.datetime    # UTC, the run initialization

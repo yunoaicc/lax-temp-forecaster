@@ -160,3 +160,9 @@ def test_find_edges_missing_quote_row_kept_not_flagged():
     out = kalshi.find_edges(dist, contracts, ticker_map, fetcher=empty_fetcher)
     assert set(out["label"]) == {"> 61"}
     assert bool(out.iloc[0]["flagged"]) is False
+
+
+def test_find_edges_requires_auth_with_default_fetcher():
+    dist = _dist([60, 61, 62], [0.2, 0.5, 0.3])
+    with pytest.raises(ValueError, match="auth"):
+        kalshi.find_edges(dist, [pricing.Contract.greater(61)], {"> 61": "T"})

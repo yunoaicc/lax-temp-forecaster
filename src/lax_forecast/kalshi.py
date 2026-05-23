@@ -169,6 +169,11 @@ def find_edges(
 
     Contracts whose label is absent from ticker_map are dropped with a warning.
     A ticker with no returned quote yields a NaN-quote row (kept, not flagged)."""
+    if fetcher is fetch_quotes and auth is None:
+        raise ValueError(
+            "auth is required when using the default fetch_quotes fetcher; "
+            "pass auth=KalshiAuth.from_env()"
+        )
     book = price_book(dist, contracts).copy()
     book["ticker"] = book["label"].map(ticker_map)
     missing = book["ticker"].isna()

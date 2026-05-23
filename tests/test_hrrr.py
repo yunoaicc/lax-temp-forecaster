@@ -30,3 +30,15 @@ def test_kelvin_to_fahrenheit():
     assert hrrr.kelvin_to_fahrenheit(273.15) == pytest.approx(32.0)
     assert hrrr.kelvin_to_fahrenheit(300.0) == pytest.approx(80.33, abs=0.01)
     assert hrrr.kelvin_to_fahrenheit(310.928) == pytest.approx(100.0, abs=0.01)
+
+
+def test_lead_hours_positive_for_future_target():
+    # target 2026-06-15 14:00 PDT == 21:00 UTC; init at 09:00 UTC same day -> 12h
+    init = dt.datetime(2026, 6, 15, 9, tzinfo=UTC)
+    assert hrrr.lead_hours(init, dt.date(2026, 6, 15)) == 12
+
+
+def test_lead_hours_negative_for_past_target():
+    # init AFTER the target's 14:00 PDT -> negative lead (stale target)
+    init = dt.datetime(2026, 6, 16, 0, tzinfo=UTC)
+    assert hrrr.lead_hours(init, dt.date(2026, 6, 15)) < 0

@@ -42,6 +42,16 @@ def kelvin_to_fahrenheit(k: float) -> float:
     return (float(k) - 273.15) * 9.0 / 5.0 + 32.0
 
 
+def _as_utc(t: dt.datetime) -> dt.datetime:
+    return t if t.tzinfo else t.replace(tzinfo=UTC)
+
+
+def lead_hours(init_time: dt.datetime, target_date: dt.date) -> int:
+    """Whole hours from run init to the target day's 14:00 PT (typical max hour)."""
+    target_14 = dt.datetime.combine(target_date, dt.time(14), tzinfo=PACIFIC)
+    return int((target_14.astimezone(UTC) - _as_utc(init_time)).total_seconds() / 3600)
+
+
 @dataclass
 class HRRRMember:
     init_time: dt.datetime    # UTC, the run initialization

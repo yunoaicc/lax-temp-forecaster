@@ -101,3 +101,14 @@ class HRRRCalibrator:
                 stacklevel=2,
             )
         return self.calibrate(ens.mean, ens.spread, smoothing_eps=smoothing_eps)
+
+    def summary(self) -> pd.DataFrame:
+        """Diagnostics: n_obs, mean residual bias (°F), and z-distribution quantiles."""
+        qs = (0.05, 0.25, 0.50, 0.75, 0.95)
+        row = {
+            "n_obs": self._n,
+            "mean_bias_f": round(float(self._residuals.mean()), 2),
+        }
+        for q in qs:
+            row[f"z_q{int(q * 100):02d}"] = round(float(np.quantile(self._z, q)), 3)
+        return pd.DataFrame([row])

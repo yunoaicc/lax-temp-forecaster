@@ -116,3 +116,12 @@ def test_calibrate_ensemble_warns_on_single_member():
     ens = _ensemble([70.0])  # 1 member -> spread 0
     with pytest.warns(UserWarning, match="member"):
         calib.calibrate_ensemble(ens)
+
+
+def test_summary_reports_bias_and_quantiles():
+    # residuals = +2 for all rows -> mean_bias_f = 2.0
+    calib = hc.HRRRCalibrator(_training_table([2.0] * 8, spread=1.0), min_obs=3)
+    s = calib.summary()
+    assert int(s.loc[0, "n_obs"]) == 8
+    assert s.loc[0, "mean_bias_f"] == pytest.approx(2.0)
+    assert "z_q50" in s.columns

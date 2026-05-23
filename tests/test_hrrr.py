@@ -168,3 +168,39 @@ def test_require_herbie_raises_clear_error(monkeypatch):
     monkeypatch.setattr(hrrr.importlib, "import_module", fake_import)
     with pytest.raises(ImportError, match=r"\[hrrr\]"):
         hrrr._require_herbie()
+
+
+def _fake_fetcher(init_time, fxx_list, **kwargs):
+    """Return a flat 300 K series for the requested forecast hours."""
+    init_utc = init_time if init_time.tzinfo else init_time.replace(tzinfo=UTC)
+    valid = [init_utc + dt.timedelta(hours=int(f)) for f in fxx_list]
+    return valid, [300.0] * len(fxx_list)
+
+
+def test_member_for_run_builds_member():
+    init = dt.datetime(2026, 6, 15, 16, tzinfo=UTC)  # local 09:00 PDT, reaches afternoon
+    m = hrrr.member_for_run(init, dt.date(2026, 6, 15), fetcher=_fake_fetcher)
+    assert m is not None
+    assert m.target_date == dt.date(2026, 6, 15)
+    assert m.member_high_f == pytest.approx(hrrr.kelvin_to_fahrenheit(300.0))
+
+
+def test_latest_ensemble_assembles_selected_members_offline():
+    as_of = dt.datetime(2026, 6, 15, 18, tzinfo=UTC)
+    ens = hrrr.latest_ensemble(
+        dt.date(2026, 6, 15), as_of=as_of, max_members=3, fetcher=_fake_fetcher
+    )
+    assert ens.n_members == 3
+    assert ens.mean == pytest.approx(hrrr.kelvin_to_fahrenheit(300.0))
+
+
+def test_latest_ensemble_raises_when_no_members():
+    as_of = dt.datetime(2026, 6, 15, 18, tzinfo=UTC)
+
+    def empty_fetcher(init_time, fxx_list, **kwargs):
+        return [], []
+
+    with pytest.raises(LookupError):
+        hrrr.latest_ensemble(
+            dt.date(2026, 6, 15), as_of=as_of, max_members=3, fetcher=empty_fetcher
+        )

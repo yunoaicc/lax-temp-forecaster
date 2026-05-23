@@ -211,3 +211,54 @@ class HRRREnsemble:
     @property
     def spread(self) -> float:
         return float(self.values_f.std()) if self.members else float("nan")
+
+
+def member_for_run(
+    init_time: dt.datetime,
+    target_date: dt.date,
+    *,
+    fetcher=fetch_run_2m_temp,
+    max_window: tuple[int, int] = MAX_WINDOW,
+) -> HRRRMember | None:
+    """Build one ensemble member (or None if the run does not cover the day)."""
+    fxx_list = fxx_covering_target(init_time, target_date)
+    if not fxx_list:
+        return None
+    valid_times, temps_k = fetcher(init_time, fxx_list)
+    result = daily_high_from_series(valid_times, temps_k, target_date, max_window=max_window)
+    if result is None:
+        return None
+    high_f, n = result
+    return HRRRMember(
+        init_time=_as_utc(init_time),
+        target_date=target_date,
+        member_high_f=high_f,
+        lead_hours=lead_hours(init_time, target_date),
+        n_valid_hours=n,
+    )
+
+
+def latest_ensemble(
+    target_date: dt.date,
+    *,
+    as_of: dt.datetime | None = None,
+    max_members: int = DEFAULT_MAX_MEMBERS,
+    fetcher=fetch_run_2m_temp,
+    max_window: tuple[int, int] = MAX_WINDOW,
+) -> HRRREnsemble:
+    """Assemble the time-lagged ensemble for target_date as of `as_of` (default now)."""
+    as_of = as_of or dt.datetime.now(UTC)
+    inits = select_run_init_times(
+        target_date, as_of, max_members=max_members, max_window=max_window
+    )
+    members: list[HRRRMember] = []
+    for init in inits:
+        try:
+            m = member_for_run(init, target_date, fetcher=fetcher, max_window=max_window)
+        except Exception:
+            continue  # skip a run that failed to fetch/parse; keep the others
+        if m is not None:
+            members.append(m)
+    if not members:
+        raise LookupError(f"No HRRR members for {target_date} as of {as_of.isoformat()}.")
+    return HRRREnsemble(target_date=target_date, members=members)

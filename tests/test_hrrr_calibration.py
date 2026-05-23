@@ -170,3 +170,34 @@ def test_build_training_table_assembles_at_decision_time():
     as_of_utc = dt.datetime(2026, 6, 15, 13, tzinfo=UTC)
     assert seen_inits, "fetcher was never called — no runs selected"
     assert max(seen_inits) <= as_of_utc
+
+
+def _training_table_with_regime(zvals_by_regime, ens_mean=70.0, spread=1.0):
+    """zvals_by_regime: dict regime_label -> list of z values. Builds a training
+    table (with a 'regime' column) whose standardized residuals equal those z."""
+    rows = []
+    i = 0
+    for regime, zvals in zvals_by_regime.items():
+        for z in zvals:
+            rows.append({
+                "target_date": dt.date(2026, 1, 1) + dt.timedelta(days=i),
+                "ensemble_mean": ens_mean,
+                "ensemble_spread": spread,
+                "actual_high_f": ens_mean + z * spread,
+                "n_members": 12,
+                "regime": regime,
+            })
+            i += 1
+    return pd.DataFrame(rows)
+
+
+def test_regime_support_reports_well_supported_only():
+    table = _training_table_with_regime({"stratus": [0.0] * 5, "clear": [1.0] * 2})
+    calib = hc.HRRRCalibrator(table, min_obs=3, min_regime_obs=4)
+    # clear has only 2 samples (< 4) -> excluded; stratus has 5 -> kept
+    assert calib.regime_support() == {"stratus": 5}
+
+
+def test_constructor_without_regime_column_has_no_buckets():
+    calib = hc.HRRRCalibrator(_training_table([-1.0, 0.0, 1.0, 2.0]), min_obs=3)
+    assert calib.regime_support() == {}

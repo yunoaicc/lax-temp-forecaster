@@ -53,6 +53,7 @@ class HRRRCalibrator:
         *,
         spread_floor: float = DEFAULT_SPREAD_FLOOR,
         min_obs: int = DEFAULT_MIN_OBS,
+        min_regime_obs: int = 15,
     ):
         required = {"ensemble_mean", "ensemble_spread", "actual_high_f"}
         missing = required - set(training_table.columns)
@@ -71,9 +72,26 @@ class HRRRCalibrator:
         self._z = self._residuals / eff_spread
         self._n = int(len(t))
 
+        # Per-regime standardized-residual buckets (only those with enough support).
+        self._z_by_regime: dict[str, np.ndarray] = {}
+        if "regime" in t.columns:
+            regimes = t["regime"].to_numpy(object)
+            labels = {
+                r for r in regimes
+                if r is not None and not (isinstance(r, float) and np.isnan(r))
+            }
+            for label in labels:
+                bucket = self._z[regimes == label]
+                if len(bucket) >= min_regime_obs:
+                    self._z_by_regime[str(label)] = bucket
+
     @property
     def n_obs(self) -> int:
         return self._n
+
+    def regime_support(self) -> dict[str, int]:
+        """Each well-supported regime (>= min_regime_obs samples) -> its sample count."""
+        return {label: int(len(z)) for label, z in self._z_by_regime.items()}
 
     def calibrate(
         self,

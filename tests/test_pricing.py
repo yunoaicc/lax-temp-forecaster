@@ -59,3 +59,36 @@ def test_price_book_empty_has_columns():
     book = pricing.price_book(_dist([60, 61], [0.5, 0.5]), [])
     assert list(book.columns) == ["label", "kind", "fair_prob", "fair_cents"]
     assert len(book) == 0
+
+
+def test_ladder_structure():
+    contracts = pricing.lahigh_ladder(70, 74, width=2)
+    # bottom tail, two between buckets [70,71] [72,73], top tail
+    assert [c.kind for c in contracts] == ["less", "between", "between", "greater"]
+    assert (contracts[1].lo, contracts[1].hi) == (70, 71)
+    assert (contracts[2].lo, contracts[2].hi) == (72, 73)
+    assert contracts[0].threshold == 70   # less(70)
+    assert contracts[-1].threshold == 73  # greater(73) == "≥ 74"
+
+
+def test_ladder_probabilities_sum_to_one():
+    # uniform over 59..65 (7 values); any partition of the integer line sums to 1
+    dist = _dist(list(range(59, 66)), [1 / 7] * 7)
+    book = pricing.price_book(dist, pricing.lahigh_ladder(61, 64, width=1))
+    assert book["fair_prob"].sum() == pytest.approx(1.0)
+
+
+def test_ladder_rejects_bad_width():
+    with pytest.raises(ValueError):
+        pricing.lahigh_ladder(70, 74, width=0)
+
+
+def test_ladder_rejects_inverted_edges():
+    with pytest.raises(ValueError):
+        pricing.lahigh_ladder(74, 70, width=1)
+
+
+def test_ladder_rejects_non_multiple_span():
+    # span 5 is not a multiple of width 2
+    with pytest.raises(ValueError):
+        pricing.lahigh_ladder(70, 75, width=2)

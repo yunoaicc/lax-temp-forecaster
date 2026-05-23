@@ -61,3 +61,28 @@ def price_book(dist: DistributionSummary, contracts: Iterable[Contract]) -> pd.D
             "fair_cents": int(round(p * 100)),
         })
     return pd.DataFrame(rows, columns=["label", "kind", "fair_prob", "fair_cents"])
+
+
+def lahigh_ladder(low_edge: int, high_edge: int, width: int = 1) -> list[Contract]:
+    """Mutually-exclusive, exhaustive LAHIGH ladder over the integer °F line:
+
+      - bottom tail: Contract.less(low_edge)         -> (-inf, low_edge-1]
+      - middle:      Contract.between(a, a+width-1) tiling [low_edge, high_edge)
+      - top tail:    Contract.greater(high_edge-1)   -> [high_edge, +inf)
+
+    Disjoint and exhaustive, so fair probabilities sum to 1. Requires
+    (high_edge - low_edge) to be a positive multiple of width."""
+    if width < 1:
+        raise ValueError(f"width must be >= 1, got {width}")
+    if low_edge >= high_edge:
+        raise ValueError(f"low_edge must be < high_edge, got {low_edge}, {high_edge}")
+    if (high_edge - low_edge) % width != 0:
+        raise ValueError(
+            f"(high_edge - low_edge) must be a multiple of width; "
+            f"got span {high_edge - low_edge}, width {width}"
+        )
+    contracts = [Contract.less(low_edge)]
+    for a in range(low_edge, high_edge, width):
+        contracts.append(Contract.between(a, a + width - 1))
+    contracts.append(Contract.greater(high_edge - 1))
+    return contracts

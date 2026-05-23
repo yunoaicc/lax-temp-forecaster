@@ -112,3 +112,49 @@ class HRRRCalibrator:
         for q in qs:
             row[f"z_q{int(q * 100):02d}"] = round(float(np.quantile(self._z, q)), 3)
         return pd.DataFrame([row])
+
+
+TRAINING_COLUMNS = ["target_date", "ensemble_mean", "ensemble_spread", "actual_high_f", "n_members"]
+
+
+def build_training_table(
+    target_dates: Iterable[dt.date],
+    *,
+    decision_time_hour: int = DEFAULT_DECISION_HOUR,
+    fetcher=fetch_run_2m_temp,
+    actuals: pd.Series | None = None,
+) -> pd.DataFrame:
+    """One row per day: (ensemble assembled at decision_time_hour PT) joined to actuals.
+
+    Days with no ensemble (LookupError) or no actual are dropped.
+    """
+    if actuals is None:
+        from .data import load_lax_history
+        actuals = load_lax_history().df["tmax_f"]
+    actuals = actuals.copy()
+    actuals.index = pd.to_datetime(actuals.index).date
+    actual_map = actuals.to_dict()
+
+    rows = []
+    for target in target_dates:
+        as_of = dt.datetime.combine(
+            target, dt.time(decision_time_hour), tzinfo=PACIFIC
+        ).astimezone(UTC)
+        try:
+            ens = latest_ensemble(target, as_of=as_of, fetcher=fetcher)
+        except LookupError:
+            continue
+        rows.append({
+            "target_date": target,
+            "ensemble_mean": ens.mean,
+            "ensemble_spread": ens.spread,
+            "n_members": ens.n_members,
+        })
+
+    if not rows:
+        return pd.DataFrame(columns=TRAINING_COLUMNS)
+
+    df = pd.DataFrame(rows)
+    df["actual_high_f"] = df["target_date"].map(actual_map)
+    df = df.dropna(subset=["actual_high_f"]).reset_index(drop=True)
+    return df[TRAINING_COLUMNS]

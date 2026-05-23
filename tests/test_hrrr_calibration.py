@@ -125,3 +125,27 @@ def test_summary_reports_bias_and_quantiles():
     assert int(s.loc[0, "n_obs"]) == 8
     assert s.loc[0, "mean_bias_f"] == pytest.approx(2.0)
     assert "z_q50" in s.columns
+
+
+def _fake_fetcher(init_time, fxx_list, **kwargs):
+    """Flat 290 K + small per-fxx variation so the ensemble has nonzero spread."""
+    init_utc = init_time if init_time.tzinfo else init_time.replace(tzinfo=UTC)
+    valid = [init_utc + dt.timedelta(hours=int(f)) for f in fxx_list]
+    temps = [290.0 + (int(f) % 3) for f in fxx_list]
+    return valid, temps
+
+
+def test_build_training_table_joins_actuals_and_drops_unmatched():
+    targets = [dt.date(2026, 6, 15), dt.date(2026, 6, 16), dt.date(2026, 6, 17)]
+    # actuals present for only two of the three target dates
+    actuals = pd.Series(
+        [82.0, 84.0],
+        index=pd.DatetimeIndex([dt.date(2026, 6, 15), dt.date(2026, 6, 16)]),
+    )
+    table = hc.build_training_table(targets, fetcher=_fake_fetcher, actuals=actuals)
+    assert list(table.columns) == [
+        "target_date", "ensemble_mean", "ensemble_spread", "actual_high_f", "n_members",
+    ]
+    assert set(table["target_date"]) == {dt.date(2026, 6, 15), dt.date(2026, 6, 16)}
+    assert table["actual_high_f"].tolist() == [82.0, 84.0]
+    assert (table["n_members"] > 0).all()

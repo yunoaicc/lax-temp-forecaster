@@ -262,3 +262,49 @@ def latest_ensemble(
     if not members:
         raise LookupError(f"No HRRR members for {target_date} as of {as_of.isoformat()}.")
     return HRRREnsemble(target_date=target_date, members=members)
+
+
+MEMBER_CACHE_FIELDS = ["init_time", "target_date", "member_high_f", "lead_hours", "n_valid_hours"]
+
+
+def members_to_frame(members: list[HRRRMember]) -> pd.DataFrame:
+    rows = [
+        {
+            "init_time": _as_utc(m.init_time).isoformat(),
+            "target_date": m.target_date.isoformat(),
+            "member_high_f": m.member_high_f,
+            "lead_hours": m.lead_hours,
+            "n_valid_hours": m.n_valid_hours,
+        }
+        for m in members
+    ]
+    return pd.DataFrame(rows, columns=MEMBER_CACHE_FIELDS)
+
+
+def save_members(members: list[HRRRMember], path: Path | str = DEFAULT_MEMBER_CACHE) -> None:
+    """Append members to the CSV cache, deduplicating on (init_time, target_date)."""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    new = members_to_frame(members)
+    if path.exists():
+        existing = pd.read_csv(path, dtype=str)
+        combined = pd.concat([existing, new.astype(str)], ignore_index=True)
+    else:
+        combined = new.astype(str)
+    combined = combined.drop_duplicates(subset=["init_time", "target_date"], keep="last")
+    combined.to_csv(path, index=False)
+
+
+def load_members(path: Path | str = DEFAULT_MEMBER_CACHE) -> list[HRRRMember]:
+    path = Path(path)
+    df = pd.read_csv(path)
+    out: list[HRRRMember] = []
+    for _, r in df.iterrows():
+        out.append(HRRRMember(
+            init_time=dt.datetime.fromisoformat(r["init_time"]),
+            target_date=dt.date.fromisoformat(str(r["target_date"])),
+            member_high_f=float(r["member_high_f"]),
+            lead_hours=int(r["lead_hours"]),
+            n_valid_hours=int(r["n_valid_hours"]),
+        ))
+    return out

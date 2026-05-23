@@ -204,3 +204,24 @@ def test_latest_ensemble_raises_when_no_members():
         hrrr.latest_ensemble(
             dt.date(2026, 6, 15), as_of=as_of, max_members=3, fetcher=empty_fetcher
         )
+
+
+def test_member_cache_round_trip(tmp_path):
+    path = tmp_path / "hrrr_members.csv"
+    members = [
+        hrrr.HRRRMember(dt.datetime(2026, 6, 15, 6, tzinfo=UTC), dt.date(2026, 6, 15), 60.0, 8, 14),
+        hrrr.HRRRMember(dt.datetime(2026, 6, 15, 12, tzinfo=UTC), dt.date(2026, 6, 15), 64.0, 2, 14),
+    ]
+    hrrr.save_members(members, path=path)
+    loaded = hrrr.load_members(path=path)
+    assert len(loaded) == 2
+    assert loaded[0].member_high_f == pytest.approx(60.0)
+    assert loaded[0].target_date == dt.date(2026, 6, 15)
+
+
+def test_save_members_dedupes_on_init_and_target(tmp_path):
+    path = tmp_path / "hrrr_members.csv"
+    m1 = hrrr.HRRRMember(dt.datetime(2026, 6, 15, 6, tzinfo=UTC), dt.date(2026, 6, 15), 60.0, 8, 14)
+    hrrr.save_members([m1], path=path)
+    hrrr.save_members([m1], path=path)  # same key again
+    assert len(hrrr.load_members(path=path)) == 1

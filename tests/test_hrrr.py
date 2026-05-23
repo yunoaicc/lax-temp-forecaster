@@ -83,3 +83,17 @@ def test_daily_high_ignores_other_days():
     high_f, n = hrrr.daily_high_from_series(valid, tk, target)
     assert high_f == pytest.approx(hrrr.kelvin_to_fahrenheit(300.0))
     assert n == len(hours)
+
+
+def test_fxx_covering_target_for_06z_run():
+    # 06Z run on 2026-06-15 -> local init 2026-06-14 23:00 PDT.
+    # Forecast hours whose valid LOCAL date is 2026-06-15 are fxx 1..24.
+    init = dt.datetime(2026, 6, 15, 6, tzinfo=UTC)
+    assert hrrr.fxx_covering_target(init, dt.date(2026, 6, 15)) == list(range(1, 25))
+
+
+def test_fxx_covering_target_empty_when_out_of_range():
+    # A 17Z run (f18): local init 2026-06-15 10:00 PDT, reaches only to
+    # 2026-06-16 04:00 PDT, so it cannot cover all of 2026-06-17.
+    init = dt.datetime(2026, 6, 15, 17, tzinfo=UTC)
+    assert hrrr.fxx_covering_target(init, dt.date(2026, 6, 17)) == []

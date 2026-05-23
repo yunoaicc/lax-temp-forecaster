@@ -74,6 +74,22 @@ def daily_high_from_series(
     return max(day_temps_f), len(day_temps_f)
 
 
+def fxx_covering_target(
+    init_time: dt.datetime,
+    target_date: dt.date,
+) -> list[int]:
+    """Forecast hours of a run whose valid local date equals target_date,
+    bounded by the run's max forecast hour."""
+    init_utc = _as_utc(init_time)
+    fmax = expected_max_fxx(init_utc.hour)
+    out = []
+    for fxx in range(0, fmax + 1):
+        local = (init_utc + dt.timedelta(hours=fxx)).astimezone(PACIFIC)
+        if local.date() == target_date:
+            out.append(fxx)
+    return out
+
+
 @dataclass
 class HRRRMember:
     init_time: dt.datetime    # UTC, the run initialization

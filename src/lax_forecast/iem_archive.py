@@ -40,8 +40,9 @@ LAX_SECTION_MARKER = "Los Angeles Airport"
 _DATE_LINE_RE = re.compile(r"^Date\s+(.*)$")
 _PDT_HOUR_LINE_RE = re.compile(r"^(?:PDT|PST)\s+\dhrly\s+(.*)$")
 _MAXMIN_LINE_RE = re.compile(r"^(Max/Min|Min/Max)\s+(.*)$", re.IGNORECASE)
-# A date label in the Date line is like "Thu 05/22/25"
-_DATE_LABEL_RE = re.compile(r"([A-Z][a-z]{2})\s+(\d{2})/(\d{2})/(\d{2})")
+# A date label in the Date line is like "Thu 05/22/25". The weekday prefix is
+# optional: 6-hourly continuation rows lead with a bare "05/24/26".
+_DATE_LABEL_RE = re.compile(r"(?:[A-Z][a-z]{2}\s+)?(\d{2})/(\d{2})/(\d{2})")
 # Issuance line example: "627 AM PDT Thu May 22 2025"
 _ISSUANCE_RE = re.compile(
     r"(\d{3,4})\s+(AM|PM)\s+(PDT|PST)\s+\w+\s+([A-Za-z]+)\s+(\d{1,2})\s+(\d{4})"
@@ -182,7 +183,7 @@ def _find_date_value_pairs(section: str) -> list[tuple[dt.date, int]]:
         # Find dates in this Date line — preserve their (label, start_col) positions
         date_hits: list[tuple[dt.date, int]] = []
         for m in _DATE_LABEL_RE.finditer(date_line):
-            _, mm, dd, yy = m.groups()
+            mm, dd, yy = m.groups()
             year = 2000 + int(yy)
             try:
                 d = dt.date(year, int(mm), int(dd))

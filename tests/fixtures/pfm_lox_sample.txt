@@ -1,0 +1,356 @@
+039 
+FOUS56 KLOX 220626
+PFMLOX
+
+Point Forecast Matrices
+National Weather Service Los Angeles/Oxnard CA
+1126 PM PDT Thu May 21 2026
+
+CAZ368-221100-
+Downtown Los Angeles-Los Angeles CA
+34.02N 118.28W Elev. 187 ft
+1126 PM PDT Thu May 21 2026
+
+Date          Thu 05/21/26      Fri 05/22/26            Sat 05/23/26         Sun
+PDT 3hrly     14 17 20 23 02 05 08 11 14 17 20 23 02 05 08 11 14 17 20 23 02 05
+UTC 3hrly     21 00 03 06 09 12 15 18 21 00 03 06 09 12 15 18 21 00 03 06 09 12
+
+Min/Max                      58          75          60          74          60
+Temp                      59 58 61 73 75 72 65 62 61 60 62 70 74 71 66 64 62 61
+Dewpt                     55 55 56 56 54 50 54 55 56 56 56 52 49 47 57 60 61 60
+RH                        87 90 84 55 48 46 68 78 84 87 81 53 41 42 73 87 97 97
+Wind dir                   S SE  S SW SW SW SW  S  S  S SW SW SW SW SW  S SW  S
+Wind spd                   2  3  3  6  8  8  4  3  2  1  1  6  8  8  4  2  2  1
+Clouds                    OV OV OV CL CL CL CL OV OV OV OV CL CL CL CL OV OV OV
+PoP 12hr                      0           0           0           0           0
+QPF 12hr                      0           0           0           0           0
+Snow 12hr                 00-00       00-00       00-00                        
+Obvis                     PF PF PF             PF PF PF PF             PF PF PF
+
+
+Date           05/24/26  Mon 05/25/26  Tue 05/26/26  Wed 05/27/26  Thu 05/28/26
+PDT 6hrly     11 17 23   05 11 17 23   05 11 17 23   05 11 17 23   05 11 17
+UTC 6hrly     18 00 06   12 18 00 06   12 18 00 06   12 18 00 06   12 18 00
+
+Max/Min          73      59    70      55    70      55    69      55    72
+Temp          69 71 62   59 67 67 58   56 64 67 58   56 63 66 57   56 66 69
+Dewpt         58 56 59   59 57 55 57   56 56 56 56   55 54 54 54   54 54 55
+PWind dir        SW      SW    SW       S    SE       S    SE       S     S
+Wind char        LT      LT    LT      LT    LT      LT    LT      LT    LT
+Avg clouds    OV CL CL   OV OV FW CL   FW B2 B1 FW   B1 B2 SC FW   SC B1 SC
+PoP 12hr          0       0     0       0     0       0     0       0     0
+
+$$
+CAZ343-221100-
+Paso Robles Municipal Airport CA
+35.67N 120.63W Elev. 820 ft
+1126 PM PDT Thu May 21 2026
+
+Date          Thu 05/21/26      Fri 05/22/26            Sat 05/23/26         Sun
+PDT 3hrly     14 17 20 23 02 05 08 11 14 17 20 23 02 05 08 11 14 17 20 23 02 05
+UTC 3hrly     21 00 03 06 09 12 15 18 21 00 03 06 09 12 15 18 21 00 03 06 09 12
+
+Min/Max                      46          84          46          78          46
+Temp                      50 46 60 80 84 73 54 49 46 46 61 74 78 72 56 51 50 46
+Dewpt                     40 38 47 49 41 33 30 36 37 40 52 51 46 41 38 44 48 45
+RH                        68 73 62 34 22 23 40 61 71 79 72 44 32 33 51 77 93 96
+Wind dir                   W NW SW  S SW SW SW SW SW SW SW  S SW SW SW SW  W SW
+Wind spd                   1  1  2 13 17 17 11  5  2  2  4 13 17 16 11  5  4  2
+Clouds                    FW CL CL CL CL CL CL CL CL CL CL CL CL CL CL CL CL CL
+PoP 12hr                      0           0           0           0           0
+QPF 12hr                      0           0           0           0           0
+Snow 12hr                 00-00       00-00       00-00                        
+
+
+Date           05/24/26  Mon 05/25/26  Tue 05/26/26  Wed 05/27/26  Thu 05/28/26
+PDT 6hrly     11 17 23   05 11 17 23   05 11 17 23   05 11 17 23   05 11 17
+UTC 6hrly     18 00 06   12 18 00 06   12 18 00 06   12 18 00 06   12 18 00
+
+Max/Min          78      46    77      45    77      44    80      47    81
+Temp          65 76 55   47 65 74 55   46 65 75 54   45 67 77 57   48 68 77
+Dewpt         49 49 49   46 50 48 48   44 45 43 45   43 43 43 45   42 45 46
+PWind dir        SW      SW    SW      SW     W       W     W       W    SW
+Wind char        LT      GN    LT      LT    LT      LT    LT      LT    LT
+Avg clouds    CL CL FW   CL CL FW CL   FW SC FW CL   CL FW CL CL   FW SC CL
+PoP 12hr          0       0     0       0     0       0     0       0     0
+
+$$
+CAZ341-221100-
+San Luis Obispo CA
+35.24N 120.64W Elev. 188 ft
+1126 PM PDT Thu May 21 2026
+
+Date          Thu 05/21/26      Fri 05/22/26            Sat 05/23/26         Sun
+PDT 3hrly     14 17 20 23 02 05 08 11 14 17 20 23 02 05 08 11 14 17 20 23 02 05
+UTC 3hrly     21 00 03 06 09 12 15 18 21 00 03 06 09 12 15 18 21 00 03 06 09 12
+
+Min/Max                      47          70          52          69          53
+Temp                      48 47 59 69 70 67 56 54 53 52 61 67 69 66 56 55 54 53
+Dewpt                     48 47 54 53 48 46 48 53 53 52 59 53 49 47 49 54 54 53
+RH                       100100 83 57 45 47 74 96100100 93 61 49 50 77 96100100
+Wind dir                  NW  N  S  W NW  W  W  W  W SW  S SW NW  W  W NW  W NW
+Wind spd                   1  2  2 10 10 10  6  4  4  3  3  9 11 11  8  5  3  2
+Clouds                    OV OV OV CL CL OV OV OV OV OV OV CL CL OV OV OV OV OV
+PoP 12hr                      0           0           0           0           0
+QPF 12hr                      0           0           0           0           0
+Snow 12hr                 00-00       00-00       00-00                        
+Obvis                     PF PF PF       PF PF PF PF PF PF       PF PF PF PF PF
+
+
+Date           05/24/26  Mon 05/25/26  Tue 05/26/26  Wed 05/27/26  Thu 05/28/26
+PDT 6hrly     11 17 23   05 11 17 23   05 11 17 23   05 11 17 23   05 11 17
+UTC 6hrly     18 00 06   12 18 00 06   12 18 00 06   12 18 00 06   12 18 00
+
+Max/Min          69      53    68      49    68      48    71      50    71
+Temp          66 67 55   53 65 65 53   50 64 64 52   49 66 67 54   51 66 67
+Dewpt         57 55 54   53 56 51 52   49 52 49 50   47 51 50 51   49 53 52
+PWind dir        NW      NW    NW      NW    NW       N    SW      SW    SW
+Wind char        LT      LT    LT      LT    LT      LT    LT      LT    LT
+Avg clouds    OV CL OV   OV OV FW FW   B1 B1 FW CL   SC SC CL CL   SC B1 FW
+PoP 12hr          0       0     0       0     0       0     0       5     5
+
+$$
+CAZ347-221100-
+Santa Maria CA
+34.90N 120.45W Elev. 245 ft
+1126 PM PDT Thu May 21 2026
+
+Date          Thu 05/21/26      Fri 05/22/26            Sat 05/23/26         Sun
+PDT 3hrly     14 17 20 23 02 05 08 11 14 17 20 23 02 05 08 11 14 17 20 23 02 05
+UTC 3hrly     21 00 03 06 09 12 15 18 21 00 03 06 09 12 15 18 21 00 03 06 09 12
+
+Min/Max                      50          68          54          69          55
+Temp                      52 51 58 67 68 65 57 55 54 54 62 69 68 67 59 56 56 55
+Dewpt                     51 51 56 52 49 48 48 52 52 54 60 53 48 49 50 52 54 54
+RH                        96100 93 59 51 54 72 90 93100 93 57 49 52 72 86 93 96
+Wind dir                  NW NW  W NW NW NW NW NW  W SW  S NW NW NW NW NW NW NW
+Wind spd                   1  1  1 10 10 10  5  2  2  1  2 10 11 11  5  2  1  2
+Clouds                    OV OV OV CL CL OV OV OV OV OV OV CL CL OV OV OV OV OV
+PoP 12hr                      0           0           0           0           0
+QPF 12hr                      0           0           0           0           0
+Snow 12hr                 00-00       00-00       00-00                        
+Obvis                     PF PF PF       PF PF PF PF PF PF       PF PF PF PF PF
+
+
+Date           05/24/26  Mon 05/25/26  Tue 05/26/26  Wed 05/27/26  Thu 05/28/26
+PDT 6hrly     11 17 23   05 11 17 23   05 11 17 23   05 11 17 23   05 11 17
+UTC 6hrly     18 00 06   12 18 00 06   12 18 00 06   12 18 00 06   12 18 00
+
+Max/Min          68      55    66      49    65      48    68      49    69
+Temp          66 66 57   55 62 62 54   50 60 61 53   50 63 64 54   51 65 65
+Dewpt         54 53 55   55 52 51 51   50 49 47 50   48 48 49 51   50 51 51
+PWind dir        NW      NW    NW      NW    NW      NW     W       W    SW
+Wind char        LT      LT    LT      GN    GN      GN    LT      LT    LT
+Avg clouds    OV CL OV   OV OV FW FW   B1 B2 SC CL   SC B1 FW CL   SC B1 FW
+PoP 12hr          0       0     0       0     0       0     0       0     5
+
+$$
+CAZ350-221100-
+Santa Barbara CA
+34.43N 119.84W Elev. 9 ft
+1126 PM PDT Thu May 21 2026
+
+Date          Thu 05/21/26      Fri 05/22/26            Sat 05/23/26         Sun
+PDT 3hrly     14 17 20 23 02 05 08 11 14 17 20 23 02 05 08 11 14 17 20 23 02 05
+UTC 3hrly     21 00 03 06 09 12 15 18 21 00 03 06 09 12 15 18 21 00 03 06 09 12
+
+Min/Max                      52          66          53          65          52
+Temp                      55 52 59 65 66 62 57 57 54 53 60 64 65 63 56 55 53 52
+Dewpt                     52 51 56 55 52 48 49 56 54 53 59 57 53 51 50 54 53 52
+RH                        90 96 90 70 61 60 75 96100100 96 78 65 65 80 96100100
+Wind dir                   E  E SE SW SW  W  W  S SE SE SE SW SW  W  W  S SE  E
+Wind spd                   1  4  3  5  9  8  6  3  3  5  2  6 10 10  6  3  3  2
+Clouds                    OV OV OV CL CL CL CL OV OV OV OV CL CL CL CL OV OV OV
+PoP 12hr                      0           0           0           0           0
+QPF 12hr                      0           0           0           0           0
+Snow 12hr                 00-00       00-00       00-00                        
+Obvis                     PF PF PF             PF PF PF PF             PF PF PF
+
+
+Date           05/24/26  Mon 05/25/26  Tue 05/26/26  Wed 05/27/26  Thu 05/28/26
+PDT 6hrly     11 17 23   05 11 17 23   05 11 17 23   05 11 17 23   05 11 17
+UTC 6hrly     18 00 06   12 18 00 06   12 18 00 06   12 18 00 06   12 18 00
+
+Max/Min          65      53    66      51    69      50    66      51    68
+Temp          62 64 57   53 62 65 58   53 64 67 58   53 62 64 57   54 65 66
+Dewpt         56 55 56   53 56 55 54   52 56 52 52   50 54 53 53   51 55 55
+PWind dir        SW       W     W      NW     W      NW     S       W    SE
+Wind char        LT      LT    LT      LT    LT      LT    LT      LT    LT
+Avg clouds    OV CL FW   OV OV FW CL   FW B1 SC CL   FW SC SC CL   SC B1 SC
+PoP 12hr          0       0     0       0     0       0     0       5     5
+
+$$
+CAZ373-221100-
+Burbank CA
+34.20N 118.36W Elev. 723 ft
+1126 PM PDT Thu May 21 2026
+
+Date          Thu 05/21/26      Fri 05/22/26            Sat 05/23/26         Sun
+PDT 3hrly     14 17 20 23 02 05 08 11 14 17 20 23 02 05 08 11 14 17 20 23 02 05
+UTC 3hrly     21 00 03 06 09 12 15 18 21 00 03 06 09 12 15 18 21 00 03 06 09 12
+
+Min/Max                      60          77          58          76          57
+Temp                      62 61 63 72 77 74 67 62 60 59 62 70 75 74 65 61 59 58
+Dewpt                     56 57 57 52 51 45 49 53 54 55 55 49 46 45 49 56 57 57
+RH                        81 87 81 49 40 35 52 72 81 87 78 47 36 35 56 84 93 96
+Wind dir                  SE  S  S  S  S  S SE SE  S  S  S  S  S  S  S SE  S  S
+Wind spd                   1  3  3  8  9  9  6  5  3  2  2  6  9  9  6  4  3  2
+Clouds                    SC OV OV CL CL CL CL OV OV OV OV CL CL CL CL OV OV OV
+PoP 12hr                      0           0           0           0           0
+QPF 12hr                      0           0           0           0           0
+Snow 12hr                 00-00       00-00       00-00                        
+Obvis                        PF PF             PF PF PF PF             PF PF PF
+
+
+Date           05/24/26  Mon 05/25/26  Tue 05/26/26  Wed 05/27/26  Thu 05/28/26
+PDT 6hrly     11 17 23   05 11 17 23   05 11 17 23   05 11 17 23   05 11 17
+UTC 6hrly     18 00 06   12 18 00 06   12 18 00 06   12 18 00 06   12 18 00
+
+Max/Min          76      57    73      54    72      54    72      54    76
+Temp          69 75 61   57 68 71 58   54 65 70 59   55 65 70 58   54 68 74
+Dewpt         53 52 56   56 55 53 56   54 54 54 55   53 52 51 53   52 51 52
+PWind dir         S       S     S       S     S       S     S       S     S
+Wind char        LT      LT    LT      LT    LT      LT    LT      LT    LT
+Avg clouds    OV CL CL   OV OV FW CL   FW B1 SC FW   SC B1 SC FW   FW SC FW
+PoP 12hr          0       0     0       0     0       0     0       0     0
+
+$$
+CAZ366-221100-
+Los Angeles Airport CA
+33.94N 118.39W Elev. 99 ft
+1126 PM PDT Thu May 21 2026
+
+Date          Thu 05/21/26      Fri 05/22/26            Sat 05/23/26         Sun
+PDT 3hrly     14 17 20 23 02 05 08 11 14 17 20 23 02 05 08 11 14 17 20 23 02 05
+UTC 3hrly     21 00 03 06 09 12 15 18 21 00 03 06 09 12 15 18 21 00 03 06 09 12
+
+Min/Max                      59          68          58          67          58
+Temp                      59 59 63 66 68 66 61 60 58 58 59 63 67 64 61 59 58 58
+Dewpt                     58 59 58 54 55 56 57 58 57 57 54 52 55 53 56 56 55 56
+RH                        96100 84 65 63 70 87 93 96 96 83 67 65 67 84 90 90 93
+Wind dir                   S SE  S SW SW SW SW SW SW SW SW SW  W SW SW SW SW  W
+Wind spd                   4  3  4 10 12 12  6  4  3  3  2 11 13 13  9  6  4  3
+Clouds                    OV OV OV CL CL OV OV OV OV OV OV CL CL OV OV OV OV OV
+PoP 12hr                      0           0           0           0           0
+QPF 12hr                      0           0           0           0           0
+Snow 12hr                 00-00       00-00       00-00                        
+Obvis                     PF PF PF       PF PF PF PF PF PF       PF PF PF PF PF
+
+
+Date           05/24/26  Mon 05/25/26  Tue 05/26/26  Wed 05/27/26  Thu 05/28/26
+PDT 6hrly     11 17 23   05 11 17 23   05 11 17 23   05 11 17 23   05 11 17
+UTC 6hrly     18 00 06   12 18 00 06   12 18 00 06   12 18 00 06   12 18 00
+
+Max/Min          66      57    65      56    66      56    66      56    68
+Temp          65 65 58   57 64 63 56   56 63 64 56   56 63 63 57   56 65 66
+Dewpt         55 55 55   55 55 55 56   55 55 55 55   54 53 54 56   54 54 56
+PWind dir         W       W     W      SW     S       S    SE       S     S
+Wind char        LT      GN    LT      GN    LT      LT    LT      LT    LT
+Avg clouds    OV CL OV   OV OV FW FW   SC B2 B1 FW   SC B1 SC FW   SC SC SC
+PoP 12hr          0       0     0       0     0       0     0       0     0
+
+$$
+CAZ368-221100-
+Long Beach Airport CA
+33.81N 118.15W Elev. 32 ft
+1126 PM PDT Thu May 21 2026
+
+Date          Thu 05/21/26      Fri 05/22/26            Sat 05/23/26         Sun
+PDT 3hrly     14 17 20 23 02 05 08 11 14 17 20 23 02 05 08 11 14 17 20 23 02 05
+UTC 3hrly     21 00 03 06 09 12 15 18 21 00 03 06 09 12 15 18 21 00 03 06 09 12
+
+Min/Max                      60          74          61          74          61
+Temp                      62 60 62 69 73 72 66 63 62 61 62 67 74 70 66 63 62 61
+Dewpt                     60 59 56 56 53 49 57 59 60 59 56 54 54 48 55 56 58 57
+RH                        93 96 81 63 49 44 73 87 93 93 81 63 50 45 68 78 87 87
+Wind dir                   S  S  S SW SW  W  W  W SW SE  W SW  S  W  W  W  W  W
+Wind spd                   1  3  4  6  9 14  5  3  2  2  2  8 10 14  8  4  4  3
+Clouds                    OV OV OV CL CL CL CL OV OV OV OV CL CL CL CL OV OV OV
+PoP 12hr                      0           0           0           0           0
+QPF 12hr                      0           0           0           0           0
+Snow 12hr                 00-00       00-00       00-00                        
+Obvis                     PF PF PF             PF PF PF PF             PF PF PF
+
+
+Date           05/24/26  Mon 05/25/26  Tue 05/26/26  Wed 05/27/26  Thu 05/28/26
+PDT 6hrly     11 17 23   05 11 17 23   05 11 17 23   05 11 17 23   05 11 17
+UTC 6hrly     18 00 06   12 18 00 06   12 18 00 06   12 18 00 06   12 18 00
+
+Max/Min          74      60    72      57    69      57    69      57    73
+Temp          70 73 63   60 69 70 61   58 65 68 61   58 66 68 61   58 67 71
+Dewpt         57 56 58   57 57 53 54   55 54 54 55   54 53 51 54   54 54 53
+PWind dir        SW       W     W      SW     S       S     S       S     S
+Wind char        LT      GN    LT      GN    LT      GN    GN      LT    LT
+Avg clouds    OV CL CL   OV OV FW CL   SC B2 B1 SC   B1 B2 SC FW   FW B1 SC
+PoP 12hr          0       0     0       0     0       0     0       0     0
+
+$$
+CAZ383-221100-
+Lancaster Airport CA
+34.74N 118.21W Elev. 233 ft
+1126 PM PDT Thu May 21 2026
+
+Date          Thu 05/21/26      Fri 05/22/26            Sat 05/23/26         Sun
+PDT 3hrly     14 17 20 23 02 05 08 11 14 17 20 23 02 05 08 11 14 17 20 23 02 05
+UTC 3hrly     21 00 03 06 09 12 15 18 21 00 03 06 09 12 15 18 21 00 03 06 09 12
+
+Min/Max                      58          89          56          87          54
+Temp                      63 60 72 87 86 79 66 63 62 57 68 83 86 77 65 62 58 54
+Dewpt                     35 37 40 35 38 38 38 38 42 41 41 34 33 32 36 36 38 39
+RH                        35 42 31 16 18 23 36 39 48 55 37 17 15 19 34 38 47 57
+Wind dir                   W  W  W SW SW SW SW  W  W  W  W SW SW SW SW  W  W  W
+Wind spd                  12 10 10 14 23 23 16 12 10  6  5 11 20 20 16 11  9  8
+Wind gust                             34 34                   31 31            
+Clouds                    CL CL CL CL CL CL CL CL CL CL CL CL CL CL CL CL CL CL
+PoP 12hr                      0           0           0           0           0
+QPF 12hr                      0           0           0           0           0
+Snow 12hr                 00-00       00-00       00-00                        
+
+
+Date           05/24/26  Mon 05/25/26  Tue 05/26/26  Wed 05/27/26  Thu 05/28/26
+PDT 6hrly     11 17 23   05 11 17 23   05 11 17 23   05 11 17 23   05 11 17
+UTC 6hrly     18 00 06   12 18 00 06   12 18 00 06   12 18 00 06   12 18 00
+
+Max/Min          87      54    84      51    78      48    78      48    82
+Temp          82 84 64   54 79 80 62   53 73 75 57   51 71 75 58   50 74 79
+Dewpt         36 39 39   40 42 44 46   44 44 45 45   41 36 39 42   40 33 36
+PWind dir        SW      SW    SW      SW    SW      SW    SW      SW    SW
+Wind char        GN      BZ    BZ      BZ    WY      WY    GN      BZ    LT
+Avg clouds    CL CL CL   CL CL FW CL   CL CL CL FW   FW FW CL CL   CL FW FW
+PoP 12hr          0       0     0       0     0       0     0       0     0
+
+$$
+CAZ378-221100-
+Sandberg CA
+34.74N 118.72W Elev. 4470 ft
+1126 PM PDT Thu May 21 2026
+
+Date          Thu 05/21/26      Fri 05/22/26            Sat 05/23/26         Sun
+PDT 3hrly     14 17 20 23 02 05 08 11 14 17 20 23 02 05 08 11 14 17 20 23 02 05
+UTC 3hrly     21 00 03 06 09 12 15 18 21 00 03 06 09 12 15 18 21 00 03 06 09 12
+
+Min/Max                      60          77          57          75          55
+Temp                      62 60 70 76 77 72 63 59 58 57 64 73 75 72 63 59 58 55
+Dewpt                     37 37 35 38 37 41 41 42 41 37 23 31 36 39 40 43 43 38
+RH                        39 42 27 25 24 33 44 53 53 47 21 21 24 30 43 55 57 53
+Wind dir                  NW NW NW NW SW SW  W NW NW NW NW  S  S  S  W NW NW NW
+Wind spd                  11 13 10 16 16 14  8 10  9 10  8 13 16 16  9  8  8  8
+Clouds                    CL CL CL CL CL CL CL CL CL CL CL CL CL CL CL CL CL CL
+PoP 12hr                      0           0           0           0           0
+QPF 12hr                      0           0           0           0           0
+Snow 12hr                 00-00       00-00       00-00                        
+
+
+Date           05/24/26  Mon 05/25/26  Tue 05/26/26  Wed 05/27/26  Thu 05/28/26
+PDT 6hrly     11 17 23   05 11 17 23   05 11 17 23   05 11 17 23   05 11 17
+UTC 6hrly     18 00 06   12 18 00 06   12 18 00 06   12 18 00 06   12 18 00
+
+Max/Min          75      55    71      51    67      47    65      48    70
+Temp          72 72 60   55 67 66 57   51 60 63 52   48 57 61 51   49 63 65
+Dewpt         39 37 42   43 44 45 42   42 41 42 39   37 36 37 36   34 33 35
+PWind dir        SW       W     W       W     W       W    NW       W     W
+Wind char        GN      GN    GN      GN    BZ      BZ    BZ      GN    GN
+Avg clouds    CL CL CL   CL CL FW CL   CL FW FW FW   FW FW CL CL   FW FW FW
+PoP 12hr          0       0     0       0     0       0     0       5     0
+
+$$

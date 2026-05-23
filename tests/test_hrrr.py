@@ -24,3 +24,9 @@ def test_ensemble_stats():
     assert ens.mean == pytest.approx(62.0)
     assert ens.spread == pytest.approx(2.0)
     np.testing.assert_array_equal(ens.values_f, np.array([60.0, 64.0]))
+
+
+def test_kelvin_to_fahrenheit():
+    assert hrrr.kelvin_to_fahrenheit(273.15) == pytest.approx(32.0)
+    assert hrrr.kelvin_to_fahrenheit(300.0) == pytest.approx(80.33, abs=0.01)
+    assert hrrr.kelvin_to_fahrenheit(310.928) == pytest.approx(100.0, abs=0.01)

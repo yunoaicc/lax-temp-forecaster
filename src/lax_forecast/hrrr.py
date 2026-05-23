@@ -38,6 +38,10 @@ def expected_max_fxx(init_hour: int) -> int:
     return 48 if init_hour % 6 == 0 else 18
 
 
+def kelvin_to_fahrenheit(k: float) -> float:
+    return (float(k) - 273.15) * 9.0 / 5.0 + 32.0
+
+
 @dataclass
 class HRRRMember:
     init_time: dt.datetime    # UTC, the run initialization

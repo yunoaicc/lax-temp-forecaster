@@ -74,3 +74,18 @@ class HRRRCalibrator:
     @property
     def n_obs(self) -> int:
         return self._n
+
+    def calibrate(
+        self,
+        ensemble_mean: float,
+        ensemble_spread: float,
+        *,
+        smoothing_eps: float = 0.0,
+    ) -> DistributionSummary:
+        """predicted actuals = mean + max(spread, floor) * z over historical z."""
+        s = float(ensemble_spread)
+        if not np.isfinite(s) or s < 0:
+            s = 0.0
+        s_eff = max(s, self._spread_floor)
+        predicted = float(ensemble_mean) + s_eff * self._z
+        return _bin_to_distribution(predicted, smoothing_eps=smoothing_eps)

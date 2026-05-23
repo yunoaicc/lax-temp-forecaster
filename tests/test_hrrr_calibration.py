@@ -55,3 +55,39 @@ def test_calibrator_raises_on_missing_columns():
     bad = pd.DataFrame({"ensemble_mean": [70.0] * 5, "actual_high_f": [71.0] * 5})
     with pytest.raises(ValueError):
         hc.HRRRCalibrator(bad, min_obs=3)
+
+
+def test_calibrate_back_transforms_mean():
+    # residual = +2 for every row (actual = mean+2), spread = 1 -> z = 2.
+    table = _training_table([2.0] * 6, spread=1.0)
+    calib = hc.HRRRCalibrator(table, min_obs=3)
+    dist = calib.calibrate(ensemble_mean=70.0, ensemble_spread=1.0)
+    # predicted = 70 + 1*2 = 72 for all -> mean 72 (= m + s*mean(z))
+    assert dist.mean == pytest.approx(72.0)
+
+
+def test_calibrate_width_scales_with_spread():
+    z = [-2.0, -1.0, 0.0, 1.0, 2.0, -2.0, -1.0, 0.0, 1.0, 2.0]  # mean 0
+    calib = hc.HRRRCalibrator(_training_table(z, spread=1.0), min_obs=3)
+    d1 = calib.calibrate(70.0, 1.0)
+    d2 = calib.calibrate(70.0, 2.0)
+    # std scales linearly with the query spread (both >= floor)
+    assert d2.std == pytest.approx(2.0 * d1.std, abs=0.05)
+
+
+def test_calibrate_applies_spread_floor():
+    z = [-2.0, -1.0, 0.0, 1.0, 2.0]
+    calib = hc.HRRRCalibrator(_training_table(z, spread=1.0), min_obs=3)
+    dist = calib.calibrate(70.0, 0.0)  # spread 0 -> floor 0.5 applies
+    assert dist.probs.sum() == pytest.approx(1.0)
+    assert dist.std > 0.0  # floored width, not collapsed to a spike
+
+
+def test_calibrate_preserves_left_skew():
+    # Long left tail -> mean < median; a linear transform keeps the skew sign.
+    z = [-6.0, -5.0, -4.0, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 1.0, 2.0, 2.0]
+    calib = hc.HRRRCalibrator(_training_table(z, spread=1.0), min_obs=3)
+    d = calib.calibrate(70.0, 2.0)
+    lower = d.quantile(0.50) - d.quantile(0.05)
+    upper = d.quantile(0.95) - d.quantile(0.50)
+    assert lower > upper  # left tail longer

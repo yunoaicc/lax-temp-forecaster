@@ -231,6 +231,23 @@ def test_save_members_dedupes_on_init_and_target(tmp_path):
 FIXTURE_GRIB = pathlib.Path(__file__).parent / "fixtures" / "hrrr_klax_sample.grib2"
 
 
+def test_latest_ensemble_skips_failing_runs_but_keeps_others():
+    as_of = dt.datetime(2026, 6, 15, 18, tzinfo=UTC)
+    bad_init = dt.datetime(2026, 6, 15, 17, tzinfo=UTC)
+
+    def flaky_fetcher(init_time, fxx_list, **kwargs):
+        if init_time == bad_init:
+            raise RuntimeError("simulated fetch failure")
+        return _fake_fetcher(init_time, fxx_list, **kwargs)
+
+    with pytest.warns(UserWarning, match="skipping"):
+        ens = hrrr.latest_ensemble(
+            dt.date(2026, 6, 15), as_of=as_of, max_members=3, fetcher=flaky_fetcher
+        )
+    # 3 runs selected (16,17,18 UTC); the 17Z run fails -> 2 members kept.
+    assert ens.n_members == 2
+
+
 def test_decode_fixture_yields_plausible_klax_temp():
     """Offline decode-path check. Skips unless the [hrrr] extra is installed AND
     a real GRIB fixture has been captured (see the plan's one-time capture step)."""

@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import datetime as dt
 import importlib
+import warnings
 from dataclasses import dataclass
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -129,6 +130,7 @@ def ensemble_to_distribution(
     if ensemble.n_members == 0:
         raise ValueError("Cannot build a distribution from an empty ensemble.")
     ints = np.round(ensemble.values_f).astype(int)
+    # Tight ±1 grid: an ensemble is narrow by design (climatology uses ±3 because it pools many obs).
     lo, hi = int(ints.min()) - 1, int(ints.max()) + 1
     grid = np.arange(lo, hi + 1)
     probs = np.zeros_like(grid, dtype=float)
@@ -177,6 +179,7 @@ def fetch_run_2m_temp(
         tk = float(np.asarray(pt["t2m"].values).ravel()[0])
         if not (230.0 <= tk <= 340.0):
             raise ValueError(f"Implausible 2m temp {tk} K — wrong GRIB variable subset?")
+        # Recompute valid time from init+fxx (HRRR is integer-hourly); keeps the fake-fetcher contract symmetric.
         valid_times.append(init_utc + dt.timedelta(hours=int(fxx)))
         temps_k.append(tk)
     return valid_times, temps_k
@@ -255,8 +258,9 @@ def latest_ensemble(
     for init in inits:
         try:
             m = member_for_run(init, target_date, fetcher=fetcher, max_window=max_window)
-        except Exception:
-            continue  # skip a run that failed to fetch/parse; keep the others
+        except Exception as exc:
+            warnings.warn(f"skipping HRRR run {init.isoformat()}: {exc}", stacklevel=2)
+            continue
         if m is not None:
             members.append(m)
     if not members:

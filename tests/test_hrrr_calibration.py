@@ -149,3 +149,24 @@ def test_build_training_table_joins_actuals_and_drops_unmatched():
     assert set(table["target_date"]) == {dt.date(2026, 6, 15), dt.date(2026, 6, 16)}
     assert table["actual_high_f"].tolist() == [82.0, 84.0]
     assert (table["n_members"] > 0).all()
+
+
+def test_build_training_table_assembles_at_decision_time():
+    # 06:00 PT on 2026-06-15 (PDT, UTC-7) == 13:00 UTC. No selected run may be
+    # initialized after that as_of; this pins the Pacific->UTC conversion.
+    target = dt.date(2026, 6, 15)
+    seen_inits = []
+
+    def recording_fetcher(init_time, fxx_list, **kwargs):
+        init_utc = init_time if init_time.tzinfo else init_time.replace(tzinfo=UTC)
+        seen_inits.append(init_utc)
+        return _fake_fetcher(init_time, fxx_list, **kwargs)
+
+    actuals = pd.Series([82.0], index=pd.DatetimeIndex([target]))
+    hc.build_training_table(
+        [target], decision_time_hour=6, fetcher=recording_fetcher, actuals=actuals
+    )
+
+    as_of_utc = dt.datetime(2026, 6, 15, 13, tzinfo=UTC)
+    assert seen_inits, "fetcher was never called — no runs selected"
+    assert max(seen_inits) <= as_of_utc

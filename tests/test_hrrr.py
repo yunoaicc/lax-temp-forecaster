@@ -153,3 +153,18 @@ def test_ensemble_to_distribution_smoothing_adds_tail_mass():
 def test_ensemble_to_distribution_empty_raises():
     with pytest.raises(ValueError):
         hrrr.ensemble_to_distribution(hrrr.HRRREnsemble(dt.date(2026, 6, 15), []))
+
+
+def test_require_herbie_raises_clear_error(monkeypatch):
+    import importlib as _importlib
+
+    real_import = _importlib.import_module
+
+    def fake_import(name, *args, **kwargs):
+        if name == "herbie":
+            raise ImportError("no herbie")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(hrrr.importlib, "import_module", fake_import)
+    with pytest.raises(ImportError, match=r"\[hrrr\]"):
+        hrrr._require_herbie()

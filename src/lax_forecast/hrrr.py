@@ -140,6 +140,48 @@ def ensemble_to_distribution(
     return DistributionSummary(temps_f=grid, probs=probs)
 
 
+def _require_herbie():
+    """Lazily import Herbie; raise a clear install hint if the extra is missing."""
+    try:
+        return importlib.import_module("herbie")
+    except ImportError as exc:
+        raise ImportError(
+            "HRRR retrieval needs extra dependencies. "
+            "Install them with: pip install -e '.[hrrr]'"
+        ) from exc
+
+
+def fetch_run_2m_temp(
+    init_time: dt.datetime,
+    fxx_list: list[int],
+    *,
+    lat: float = KLAX_LAT,
+    lon: float = KLAX_LON,
+) -> tuple[list[dt.datetime], list[float]]:
+    """Fetch 2m temperature (K) at the KLAX nearest gridpoint for the given run
+    and forecast hours. Network: routes S3 archive vs NOMADS via Herbie by date."""
+    herbie = _require_herbie()
+    init_utc = _as_utc(init_time)
+    valid_times: list[dt.datetime] = []
+    temps_k: list[float] = []
+    points = pd.DataFrame({"longitude": [lon], "latitude": [lat]})
+    for fxx in fxx_list:
+        H = herbie.Herbie(
+            init_utc.strftime("%Y-%m-%d %H:%M"),
+            model="hrrr",
+            product="sfc",
+            fxx=int(fxx),
+        )
+        ds = H.xarray(HRRR_VAR)
+        pt = ds.herbie.nearest_points(points=points)
+        tk = float(np.asarray(pt["t2m"].values).ravel()[0])
+        if not (230.0 <= tk <= 340.0):
+            raise ValueError(f"Implausible 2m temp {tk} K — wrong GRIB variable subset?")
+        valid_times.append(init_utc + dt.timedelta(hours=int(fxx)))
+        temps_k.append(tk)
+    return valid_times, temps_k
+
+
 @dataclass
 class HRRRMember:
     init_time: dt.datetime    # UTC, the run initialization

@@ -42,3 +42,44 @@ def test_lead_hours_negative_for_past_target():
     # init AFTER the target's 14:00 PDT -> negative lead (stale target)
     init = dt.datetime(2026, 6, 16, 0, tzinfo=UTC)
     assert hrrr.lead_hours(init, dt.date(2026, 6, 15)) < 0
+
+
+def _local_series(target_date, local_hours, temps_k):
+    """Build (valid_times_utc, temps_k) for given Pacific local hours on target_date."""
+    valid = [
+        dt.datetime.combine(target_date, dt.time(h), tzinfo=hrrr.PACIFIC).astimezone(UTC)
+        for h in local_hours
+    ]
+    return valid, list(temps_k)
+
+
+def test_daily_high_picks_max_over_local_day():
+    target = dt.date(2026, 6, 15)
+    hours = list(range(10, 19))  # 10:00..18:00 PDT -> covers 13-16
+    temps_k = [300.0] * len(hours)
+    temps_k[hours.index(15)] = 305.0  # hottest at 15:00
+    valid, tk = _local_series(target, hours, temps_k)
+    result = hrrr.daily_high_from_series(valid, tk, target)
+    assert result is not None
+    high_f, n = result
+    assert high_f == pytest.approx(hrrr.kelvin_to_fahrenheit(305.0))
+    assert n == len(hours)
+
+
+def test_daily_high_returns_none_when_window_not_covered():
+    target = dt.date(2026, 6, 15)
+    hours = [6, 7, 8, 9, 10, 11, 12]  # morning only, no 13-16
+    valid, tk = _local_series(target, hours, [295.0] * len(hours))
+    assert hrrr.daily_high_from_series(valid, tk, target) is None
+
+
+def test_daily_high_ignores_other_days():
+    target = dt.date(2026, 6, 15)
+    hours = list(range(10, 19))
+    valid, tk = _local_series(target, hours, [300.0] * len(hours))
+    # add a hot step on the NEXT day; must be ignored
+    valid.append(dt.datetime.combine(dt.date(2026, 6, 16), dt.time(14), tzinfo=hrrr.PACIFIC).astimezone(UTC))
+    tk.append(320.0)
+    high_f, n = hrrr.daily_high_from_series(valid, tk, target)
+    assert high_f == pytest.approx(hrrr.kelvin_to_fahrenheit(300.0))
+    assert n == len(hours)

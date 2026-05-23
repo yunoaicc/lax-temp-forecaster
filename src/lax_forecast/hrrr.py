@@ -52,6 +52,28 @@ def lead_hours(init_time: dt.datetime, target_date: dt.date) -> int:
     return int((target_14.astimezone(UTC) - _as_utc(init_time)).total_seconds() / 3600)
 
 
+def daily_high_from_series(
+    valid_times_utc: list[dt.datetime],
+    temps_k: list[float],
+    target_date: dt.date,
+    *,
+    max_window: tuple[int, int] = MAX_WINDOW,
+) -> tuple[float, int] | None:
+    """Daily high (°F) and covered-hour count for target_date, or None if the
+    run does not span the afternoon max window [max_window[0], max_window[1]] PT."""
+    required = set(range(max_window[0], max_window[1] + 1))
+    covered: set[int] = set()
+    day_temps_f: list[float] = []
+    for vt, tk in zip(valid_times_utc, temps_k):
+        local = _as_utc(vt).astimezone(PACIFIC)
+        if local.date() == target_date:
+            covered.add(local.hour)
+            day_temps_f.append(kelvin_to_fahrenheit(tk))
+    if not day_temps_f or not required.issubset(covered):
+        return None
+    return max(day_temps_f), len(day_temps_f)
+
+
 @dataclass
 class HRRRMember:
     init_time: dt.datetime    # UTC, the run initialization

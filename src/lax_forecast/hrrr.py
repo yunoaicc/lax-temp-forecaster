@@ -117,6 +117,29 @@ def select_run_init_times(
     return sorted(selected)
 
 
+def ensemble_to_distribution(
+    ensemble: HRRREnsemble,
+    smoothing_eps: float = 0.0,
+) -> DistributionSummary:
+    """UNCALIBRATED raw distribution from binning member highs to integer °F.
+
+    This is NOT bias-corrected — calibration belongs to the fusion sub-project.
+    A ~12-member histogram is spiky; pass a small smoothing_eps to spread tail mass.
+    """
+    if ensemble.n_members == 0:
+        raise ValueError("Cannot build a distribution from an empty ensemble.")
+    ints = np.round(ensemble.values_f).astype(int)
+    lo, hi = int(ints.min()) - 1, int(ints.max()) + 1
+    grid = np.arange(lo, hi + 1)
+    probs = np.zeros_like(grid, dtype=float)
+    for v in ints:
+        probs[v - lo] += 1.0
+    if smoothing_eps > 0:
+        probs += smoothing_eps / len(grid)
+    probs /= probs.sum()
+    return DistributionSummary(temps_f=grid, probs=probs)
+
+
 @dataclass
 class HRRRMember:
     init_time: dt.datetime    # UTC, the run initialization

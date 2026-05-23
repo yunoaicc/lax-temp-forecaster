@@ -128,3 +128,28 @@ def test_select_runs_excludes_runs_after_as_of():
     runs = hrrr.select_run_init_times(dt.date(2026, 6, 15), as_of, max_members=12)
     assert all(r <= as_of for r in runs)
     assert max(runs) == dt.datetime(2026, 6, 15, 18, tzinfo=UTC)
+
+
+def _ensemble(values_f):
+    members = [
+        hrrr.HRRRMember(dt.datetime(2026, 6, 15, 6 + i, tzinfo=UTC), dt.date(2026, 6, 15), v, 8, 14)
+        for i, v in enumerate(values_f)
+    ]
+    return hrrr.HRRREnsemble(dt.date(2026, 6, 15), members)
+
+
+def test_ensemble_to_distribution_mean_and_norm():
+    dist = hrrr.ensemble_to_distribution(_ensemble([60.0, 62.0, 62.0, 64.0]))
+    assert dist.probs.sum() == pytest.approx(1.0)
+    assert dist.mean == pytest.approx(62.0)
+
+
+def test_ensemble_to_distribution_smoothing_adds_tail_mass():
+    dist = hrrr.ensemble_to_distribution(_ensemble([70.0, 70.0, 70.0]), smoothing_eps=0.3)
+    # grid spans 69..71; the 69 tail bin has zero raw count but nonzero mass after smoothing
+    assert dist.p_less_than(70) > 0.0
+
+
+def test_ensemble_to_distribution_empty_raises():
+    with pytest.raises(ValueError):
+        hrrr.ensemble_to_distribution(hrrr.HRRREnsemble(dt.date(2026, 6, 15), []))

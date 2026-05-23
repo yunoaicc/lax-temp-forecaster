@@ -12,6 +12,7 @@ dependencies = [
     "numpy>=1.24,<2.0",
     "requests>=2.30",
     "scipy>=1.10",
+    "tzdata>=2024.1",
 ]
 
 [project.optional-dependencies]
@@ -23,6 +24,11 @@ notebook = [
 ]
 dev = [
     "pytest>=8.0",
+]
+hrrr = [
+    "herbie-data>=2024.1.0",
+    "xarray>=2024.1.0",
+    "cfgrib>=0.9.10",
 ]
 
 [tool.pytest.ini_options]

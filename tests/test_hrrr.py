@@ -5,6 +5,7 @@ The pure-logic tests run fully offline. Assertions are derived from the spec
 not from the implementation.
 """
 import datetime as dt
+import pathlib
 
 import numpy as np
 import pytest
@@ -225,3 +226,26 @@ def test_save_members_dedupes_on_init_and_target(tmp_path):
     hrrr.save_members([m1], path=path)
     hrrr.save_members([m1], path=path)  # same key again
     assert len(hrrr.load_members(path=path)) == 1
+
+
+FIXTURE_GRIB = pathlib.Path(__file__).parent / "fixtures" / "hrrr_klax_sample.grib2"
+
+
+def test_decode_fixture_yields_plausible_klax_temp():
+    """Offline decode-path check. Skips unless the [hrrr] extra is installed AND
+    a real GRIB fixture has been captured (see the plan's one-time capture step)."""
+    if not FIXTURE_GRIB.exists():
+        pytest.skip("GRIB fixture not captured")
+    pytest.importorskip("cfgrib", reason="[hrrr] extra not installed")
+    pytest.importorskip("herbie", reason="[hrrr] extra not installed")
+    import pandas as pd
+    import xarray as xr
+
+    ds = xr.open_dataset(FIXTURE_GRIB, engine="cfgrib")
+    pt = ds.herbie.nearest_points(
+        points=pd.DataFrame({"longitude": [hrrr.KLAX_LON], "latitude": [hrrr.KLAX_LAT]})
+    )
+    tk = float(np.asarray(pt["t2m"].values).ravel()[0])
+    assert 230.0 <= tk <= 340.0
+    f = hrrr.kelvin_to_fahrenheit(tk)
+    assert 20.0 <= f <= 130.0  # plausible KLAX daytime range

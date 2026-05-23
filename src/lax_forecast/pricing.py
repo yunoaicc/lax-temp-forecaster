@@ -44,3 +44,20 @@ class Contract:
         if self.kind == "between":
             return dist.p_between(self.lo, self.hi)
         raise ValueError(f"unknown contract kind: {self.kind!r}")
+
+
+def price_book(dist: DistributionSummary, contracts: Iterable[Contract]) -> pd.DataFrame:
+    """Fair value per contract. Columns: label, kind, fair_prob, fair_cents.
+
+    fair_cents = round(fair_prob * 100); unclamped (this is a fair value, not a
+    tradeable quote — a sub-1% tail reports 0, not Kalshi's 1¢ minimum)."""
+    rows = []
+    for c in contracts:
+        p = c.probability(dist)
+        rows.append({
+            "label": c.label,
+            "kind": c.kind,
+            "fair_prob": p,
+            "fair_cents": int(round(p * 100)),
+        })
+    return pd.DataFrame(rows, columns=["label", "kind", "fair_prob", "fair_cents"])

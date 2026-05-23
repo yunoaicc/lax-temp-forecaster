@@ -38,3 +38,28 @@ def quotes_to_frame(quotes: Iterable[Quote]) -> pd.DataFrame:
         for q in quotes
     ]
     return pd.DataFrame(rows, columns=QUOTE_COLUMNS)
+
+
+EDGE_INPUT_COLUMNS = {"fair_cents", "yes_bid", "yes_ask"}
+
+
+def add_edges(df: pd.DataFrame, *, min_edge_cents: int = 2) -> pd.DataFrame:
+    """Add per-side edges and a flag. Requires columns fair_cents, yes_bid, yes_ask
+    (NaN quote allowed = no market). buy_edge = fair_cents - yes_ask;
+    sell_edge = yes_bid - fair_cents. On a normal book at most one is positive; if
+    fair sits inside the spread, neither is, so side is 'none'. Sorted by best_edge."""
+    missing = EDGE_INPUT_COLUMNS - set(df.columns)
+    if missing:
+        raise ValueError(f"add_edges input missing columns: {sorted(missing)}")
+    out = df.copy()
+    out["buy_edge"] = out["fair_cents"] - out["yes_ask"]
+    out["sell_edge"] = out["yes_bid"] - out["fair_cents"]
+    out["best_edge"] = out[["buy_edge", "sell_edge"]].max(axis=1)
+    best = out["best_edge"]
+    out["side"] = np.where(
+        best.isna() | (best <= 0),
+        "none",
+        np.where(out["buy_edge"] >= out["sell_edge"], "buy", "sell"),
+    )
+    out["flagged"] = (best >= min_edge_cents).fillna(False)
+    return out.sort_values("best_edge", ascending=False, na_position="last").reset_index(drop=True)

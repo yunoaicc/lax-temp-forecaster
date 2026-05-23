@@ -26,7 +26,7 @@ dev = [
     "pytest>=8.0",
 ]
 hrrr = [
-    "herbie-data>=2024.1.0",
+    "herbie-data>=2024.3.0",
     "xarray>=2024.1.0",
     "cfgrib>=0.9.10",
 ]

@@ -42,3 +42,35 @@ def _bin_to_distribution(values_f, smoothing_eps: float = 0.0) -> DistributionSu
         probs += smoothing_eps / len(grid)
     probs /= probs.sum()
     return DistributionSummary(temps_f=grid, probs=probs)
+
+
+class HRRRCalibrator:
+    """Calibrate an HRRR ensemble via spread-scaled empirical residuals."""
+
+    def __init__(
+        self,
+        training_table: pd.DataFrame,
+        *,
+        spread_floor: float = DEFAULT_SPREAD_FLOOR,
+        min_obs: int = DEFAULT_MIN_OBS,
+    ):
+        required = {"ensemble_mean", "ensemble_spread", "actual_high_f"}
+        missing = required - set(training_table.columns)
+        if missing:
+            raise ValueError(f"training_table missing columns: {sorted(missing)}")
+        t = training_table.dropna(subset=["ensemble_mean", "ensemble_spread", "actual_high_f"])
+        if len(t) < min_obs:
+            raise ValueError(f"Need >= {min_obs} training rows, got {len(t)}.")
+
+        self._spread_floor = float(spread_floor)
+        mean = t["ensemble_mean"].to_numpy(dtype=float)
+        spread = t["ensemble_spread"].to_numpy(dtype=float)
+        actual = t["actual_high_f"].to_numpy(dtype=float)
+        self._residuals = actual - mean
+        eff_spread = np.maximum(np.nan_to_num(spread, nan=0.0), self._spread_floor)
+        self._z = self._residuals / eff_spread
+        self._n = int(len(t))
+
+    @property
+    def n_obs(self) -> int:
+        return self._n

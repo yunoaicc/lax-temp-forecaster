@@ -94,3 +94,18 @@ def test_kalshi_auth_from_env_missing_raises(monkeypatch):
     monkeypatch.delenv("KALSHI_PRIVATE_KEY_PATH", raising=False)
     with pytest.raises(ValueError, match="KALSHI_API_KEY_ID"):
         kalshi.KalshiAuth.from_env()
+
+
+def test_require_cryptography_raises_clear_error(monkeypatch):
+    import importlib as _importlib
+
+    real_import = _importlib.import_module
+
+    def fake_import(name, *args, **kwargs):
+        if name == "cryptography" or name.startswith("cryptography."):
+            raise ImportError("no cryptography")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(kalshi.importlib, "import_module", fake_import)
+    with pytest.raises(ImportError, match=r"\[kalshi\]"):
+        kalshi._require_cryptography()

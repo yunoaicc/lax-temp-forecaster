@@ -8,8 +8,12 @@ __pycache__/
 
 # Virtual envs
 .venv/
+.venv*-backup/
 venv/
 env/
+
+# cfgrib index sidecars (regenerated whenever a GRIB file is opened)
+*.idx
 
 # Jupyter
 .ipynb_checkpoints/

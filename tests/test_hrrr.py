@@ -254,15 +254,10 @@ def test_decode_fixture_yields_plausible_klax_temp():
     if not FIXTURE_GRIB.exists():
         pytest.skip("GRIB fixture not captured")
     pytest.importorskip("cfgrib", reason="[hrrr] extra not installed")
-    pytest.importorskip("herbie", reason="[hrrr] extra not installed")
-    import pandas as pd
     import xarray as xr
 
     ds = xr.open_dataset(FIXTURE_GRIB, engine="cfgrib")
-    pt = ds.herbie.nearest_points(
-        points=pd.DataFrame({"longitude": [hrrr.KLAX_LON], "latitude": [hrrr.KLAX_LAT]})
-    )
-    tk = float(np.asarray(pt["t2m"].values).ravel()[0])
+    tk = hrrr._nearest_t2m_kelvin(ds, hrrr.KLAX_LAT, hrrr.KLAX_LON)
     assert 230.0 <= tk <= 340.0
     f = hrrr.kelvin_to_fahrenheit(tk)
     assert 20.0 <= f <= 130.0  # plausible KLAX daytime range

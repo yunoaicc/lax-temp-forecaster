@@ -153,6 +153,19 @@ def _require_herbie():
         ) from exc
 
 
+def _nearest_t2m_kelvin(ds, lat: float, lon: float) -> float:
+    """Nearest-gridpoint 2m temperature (K) to (lat, lon) from an HRRR xarray Dataset.
+
+    Plain numpy, no cartopy: HRRR uses a 0-360 longitude convention, so the target
+    longitude is normalised to match before the squared-distance argmin."""
+    glat = np.asarray(ds["latitude"].values)
+    glon = np.asarray(ds["longitude"].values)
+    target_lon = lon % 360 if float(glon.max()) > 180 else lon
+    dist2 = (glat - lat) ** 2 + (glon - target_lon) ** 2
+    iy, ix = np.unravel_index(int(np.argmin(dist2)), dist2.shape)
+    return float(np.asarray(ds["t2m"].values)[iy, ix])
+
+
 def fetch_run_2m_temp(
     init_time: dt.datetime,
     fxx_list: list[int],
@@ -166,7 +179,6 @@ def fetch_run_2m_temp(
     init_utc = _as_utc(init_time)
     valid_times: list[dt.datetime] = []
     temps_k: list[float] = []
-    points = pd.DataFrame({"longitude": [lon], "latitude": [lat]})
     for fxx in fxx_list:
         H = herbie.Herbie(
             init_utc.strftime("%Y-%m-%d %H:%M"),
@@ -175,8 +187,7 @@ def fetch_run_2m_temp(
             fxx=int(fxx),
         )
         ds = H.xarray(HRRR_VAR)
-        pt = ds.herbie.nearest_points(points=points)
-        tk = float(np.asarray(pt["t2m"].values).ravel()[0])
+        tk = _nearest_t2m_kelvin(ds, lat, lon)
         if not (230.0 <= tk <= 340.0):
             raise ValueError(f"Implausible 2m temp {tk} K — wrong GRIB variable subset?")
         # Recompute valid time from init+fxx (HRRR is integer-hourly); keeps the fake-fetcher contract symmetric.

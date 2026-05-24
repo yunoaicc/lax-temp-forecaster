@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import pytest
 
 from lax_forecast.climatology import DistributionSummary
@@ -46,3 +47,25 @@ def test_market_implied_prob_de_overrounds():
     # mids summing to 125 (overround); a 50c strike -> 50/125 = 0.4
     assert pnl.market_implied_prob(50, 125) == pytest.approx(0.4)
     assert np.isnan(pnl.market_implied_prob(50, 0))
+
+
+def test_score_against_market_basic():
+    # One day, 2-strike ladder: bucket [70,71] and top (>=72).
+    history = pd.DataFrame([
+        {"measurement_date": "2026-04-01", "floor_strike": 70.0, "cap_strike": 71.0,
+         "yes_bid_c": 40, "yes_ask_c": 44},
+        {"measurement_date": "2026-04-01", "floor_strike": 72.0, "cap_strike": float("nan"),
+         "yes_bid_c": 50, "yes_ask_c": 54},
+    ])
+    actual_map = {"2026-04-01": 70.0}  # the [70,71] bucket occurs
+
+    d = _point_mass(70)  # P([70,71])=1.0, P(>=72)=0.0
+    out = pnl.score_against_market(lambda ds: d, history, actual_map, min_edge=3)
+
+    assert out["n_days"] == 1
+    assert out["our_prob_realized"] == pytest.approx(1.0)          # we gave the winner 1.0
+    # market mid for the winner = (40+44)/2 = 42; ladder mids = 42 + 52 = 94 -> 42/94
+    assert out["mkt_prob_realized"] == pytest.approx(42 / 94)
+    # huge edge on the [70,71] buy (fair 100 vs ask 44) -> at least one bet
+    assert out["n_bets"] >= 1
+    assert "pnl_flat" in out and "roi_kelly" in out

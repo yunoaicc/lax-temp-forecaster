@@ -267,6 +267,20 @@ def test_latest_ensemble_skips_failing_runs_but_keeps_others():
     assert ens.n_members == 2
 
 
+def test_latest_ensemble_concurrent_matches_serial():
+    as_of = dt.datetime(2026, 6, 15, 18, tzinfo=UTC)
+    serial = hrrr.latest_ensemble(
+        dt.date(2026, 6, 15), as_of=as_of, max_members=3,
+        fetcher=_fake_fetcher, max_workers=1,
+    )
+    parallel = hrrr.latest_ensemble(
+        dt.date(2026, 6, 15), as_of=as_of, max_members=3,
+        fetcher=_fake_fetcher, max_workers=4,
+    )
+    assert [m.init_time for m in parallel.members] == [m.init_time for m in serial.members]
+    assert parallel.values_f.tolist() == serial.values_f.tolist()
+
+
 def test_decode_fixture_yields_plausible_klax_temp():
     """Offline decode-path check. Skips unless the [hrrr] extra is installed AND
     a real GRIB fixture has been captured (see the plan's one-time capture step)."""

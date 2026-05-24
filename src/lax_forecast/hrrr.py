@@ -281,17 +281,35 @@ def latest_ensemble(
     max_members: int = DEFAULT_MAX_MEMBERS,
     fetcher=fetch_run_2m_temp,
     max_window: tuple[int, int] = MAX_WINDOW,
+    max_workers: int = 6,
 ) -> HRRREnsemble:
-    """Assemble the time-lagged ensemble for target_date as of `as_of` (default now)."""
+    """Assemble the time-lagged ensemble for target_date as of `as_of` (default now).
+
+    Members are fetched concurrently (network-bound I/O). Warnings are emitted from
+    the calling thread only — warnings.catch_warnings is not thread-safe — so workers
+    return any exception for the caller to report."""
     as_of = as_of or dt.datetime.now(UTC)
     inits = select_run_init_times(
         target_date, as_of, max_members=max_members, max_window=max_window
     )
-    members: list[HRRRMember] = []
-    for init in inits:
+
+    def _build(init):
         try:
             m = member_for_run(init, target_date, fetcher=fetcher, max_window=max_window)
-        except Exception as exc:
+            return init, m, None
+        except Exception as exc:  # noqa: BLE001 — reported as a warning below
+            return init, None, exc
+
+    if max_workers and max_workers > 1 and len(inits) > 1:
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=max_workers) as ex:
+            results = list(ex.map(_build, inits))  # ex.map preserves input order
+    else:
+        results = [_build(init) for init in inits]
+
+    members: list[HRRRMember] = []
+    for init, m, exc in results:
+        if exc is not None:
             warnings.warn(f"skipping HRRR run {init.isoformat()}: {exc}", stacklevel=2)
             continue
         if m is not None:

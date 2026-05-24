@@ -197,3 +197,47 @@ def build_training_table(
     if regimes is not None:
         df["regime"] = df["target_date"].map(dict(regimes))
     return df[out_cols]
+
+
+def build_training_table_from_members(
+    members: "Iterable",
+    *,
+    actuals: pd.Series | None = None,
+    regimes: "Mapping[dt.date, str] | None" = None,
+) -> pd.DataFrame:
+    """Assemble the calibrator training table from CACHED HRRRMembers (no network).
+
+    Groups members by target_date into ensembles -> ensemble_mean / ensemble_spread
+    (population std, matching HRRREnsemble.spread) / n_members, joins actuals, and
+    attaches an optional regime. Same schema as build_training_table."""
+    if actuals is None:
+        from .data import load_lax_history
+        actuals = load_lax_history().df["tmax_f"]
+    actuals = actuals.copy()
+    actuals.index = pd.to_datetime(actuals.index).date
+    actual_map = actuals.to_dict()
+
+    out_cols = list(TRAINING_COLUMNS) + (["regime"] if regimes is not None else [])
+
+    by_date: dict[dt.date, list[float]] = {}
+    for m in members:
+        by_date.setdefault(m.target_date, []).append(float(m.member_high_f))
+
+    rows = []
+    for target, highs in by_date.items():
+        arr = np.asarray(highs, dtype=float)
+        rows.append({
+            "target_date": target,
+            "ensemble_mean": float(arr.mean()),
+            "ensemble_spread": float(arr.std()),
+            "n_members": int(len(arr)),
+        })
+    if not rows:
+        return pd.DataFrame(columns=out_cols)
+
+    df = pd.DataFrame(rows)
+    df["actual_high_f"] = df["target_date"].map(actual_map)
+    df = df.dropna(subset=["actual_high_f"]).reset_index(drop=True)
+    if regimes is not None:
+        df["regime"] = df["target_date"].map(dict(regimes))
+    return df.sort_values("target_date").reset_index(drop=True)[out_cols]

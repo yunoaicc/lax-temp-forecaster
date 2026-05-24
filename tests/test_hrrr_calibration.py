@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from lax_forecast import hrrr, hrrr_calibration
 from lax_forecast import hrrr_calibration as hc
 
 UTC = dt.timezone.utc
@@ -256,3 +257,36 @@ def test_regime_support_includes_exact_threshold():
     calib = hc.HRRRCalibrator(table, min_obs=3, min_regime_obs=4)
     # stratus has exactly 4 (== threshold) -> included; clear 3 (< 4) -> excluded
     assert calib.regime_support() == {"stratus": 4}
+
+
+def test_build_training_table_from_members_matches_ensemble_stats():
+    UTC = dt.timezone.utc
+    members = [
+        hrrr.HRRRMember(dt.datetime(2026, 1, 10, 12, tzinfo=UTC), dt.date(2026, 1, 10), 70.0, 8, 6),
+        hrrr.HRRRMember(dt.datetime(2026, 1, 10, 13, tzinfo=UTC), dt.date(2026, 1, 10), 74.0, 7, 6),
+        hrrr.HRRRMember(dt.datetime(2026, 1, 11, 12, tzinfo=UTC), dt.date(2026, 1, 11), 60.0, 8, 6),
+        hrrr.HRRRMember(dt.datetime(2026, 1, 11, 13, tzinfo=UTC), dt.date(2026, 1, 11), 62.0, 7, 6),
+    ]
+    actuals = pd.Series(
+        {pd.Timestamp("2026-01-10"): 73.0, pd.Timestamp("2026-01-11"): 61.0}
+    )
+    tbl = hrrr_calibration.build_training_table_from_members(members, actuals=actuals)
+    assert list(tbl.columns) == hrrr_calibration.TRAINING_COLUMNS
+    row = tbl.set_index("target_date").loc[dt.date(2026, 1, 10)]
+    assert row["ensemble_mean"] == pytest.approx(72.0)
+    assert row["ensemble_spread"] == pytest.approx(2.0)   # population std of [70,74]
+    assert row["actual_high_f"] == pytest.approx(73.0)
+    assert row["n_members"] == 2
+
+
+def test_build_training_table_from_members_attaches_regime():
+    UTC = dt.timezone.utc
+    members = [
+        hrrr.HRRRMember(dt.datetime(2026, 1, 10, 12, tzinfo=UTC), dt.date(2026, 1, 10), 70.0, 8, 6),
+        hrrr.HRRRMember(dt.datetime(2026, 1, 10, 13, tzinfo=UTC), dt.date(2026, 1, 10), 74.0, 7, 6),
+    ]
+    actuals = pd.Series({pd.Timestamp("2026-01-10"): 73.0})
+    tbl = hrrr_calibration.build_training_table_from_members(
+        members, actuals=actuals, regimes={dt.date(2026, 1, 10): "stratus"}
+    )
+    assert tbl.loc[0, "regime"] == "stratus"

@@ -57,6 +57,7 @@ def test_add_kelly_sizes_sell_is_buy_no():
     # sell YES at 50 = buy NO at 100-50=50, win prob 1-0.3=0.7 -> kelly 0.4
     assert r["kelly_full"] == pytest.approx(0.4)
     assert r["stake_fraction"] == pytest.approx(0.2)
+    assert r["stake"] == pytest.approx(200.0)  # 0.2 * 1000
 
 
 def test_add_kelly_sizes_caps_per_position():
@@ -74,6 +75,7 @@ def test_add_kelly_sizes_not_flagged_is_zero():
     out = sizing.add_kelly_sizes(df, bankroll=1000.0)
     assert out.iloc[0]["stake_fraction"] == 0.0
     assert out.iloc[0]["stake"] == 0.0
+    assert out.iloc[0]["kelly_full"] == pytest.approx(0.4)  # informative even when not flagged
 
 
 def test_add_kelly_sizes_none_side_is_zero():
@@ -87,3 +89,10 @@ def test_add_kelly_sizes_none_side_is_zero():
 def test_add_kelly_sizes_rejects_missing_columns():
     with pytest.raises(ValueError):
         sizing.add_kelly_sizes(pd.DataFrame({"fair_prob": [0.5]}), bankroll=1000.0)
+
+
+def test_add_kelly_sizes_rejects_negative_bankroll():
+    df = _edge_df([{"label": "a", "fair_prob": 0.7, "yes_bid": 48, "yes_ask": 50,
+                    "side": "buy", "flagged": True}])
+    with pytest.raises(ValueError, match="bankroll"):
+        sizing.add_kelly_sizes(df, bankroll=-1000.0)

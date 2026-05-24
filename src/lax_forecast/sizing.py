@@ -42,6 +42,8 @@ def add_kelly_sizes(
     missing = SIZING_INPUT_COLUMNS - set(edge_df.columns)
     if missing:
         raise ValueError(f"add_kelly_sizes input missing columns: {sorted(missing)}")
+    if bankroll < 0:
+        raise ValueError(f"bankroll must be >= 0, got {bankroll}")
     out = edge_df.copy()
 
     def _full(row) -> float:

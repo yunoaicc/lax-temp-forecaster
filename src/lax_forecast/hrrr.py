@@ -91,6 +91,28 @@ def fxx_covering_target(
     return out
 
 
+def fxx_in_window(
+    init_time: dt.datetime,
+    target_date: dt.date,
+    *,
+    max_window: tuple[int, int] = MAX_WINDOW,
+    pad: int = 1,
+) -> list[int]:
+    """Forecast hours of a run whose valid LOCAL time falls in the padded afternoon
+    max window on target_date. A superset of the hours daily_high_from_series requires
+    (so the computed daily high is unchanged) but far fewer GRIB fetches than the
+    whole-day fxx_covering_target."""
+    init_utc = _as_utc(init_time)
+    fmax = expected_max_fxx(init_utc.hour)
+    lo, hi = max_window[0] - pad, max_window[1] + pad
+    out = []
+    for fxx in range(0, fmax + 1):
+        local = (init_utc + dt.timedelta(hours=fxx)).astimezone(PACIFIC)
+        if local.date() == target_date and lo <= local.hour <= hi:
+            out.append(fxx)
+    return out
+
+
 def select_run_init_times(
     target_date: dt.date,
     as_of: dt.datetime,
@@ -235,7 +257,7 @@ def member_for_run(
     max_window: tuple[int, int] = MAX_WINDOW,
 ) -> HRRRMember | None:
     """Build one ensemble member (or None if the run does not cover the day)."""
-    fxx_list = fxx_covering_target(init_time, target_date)
+    fxx_list = fxx_in_window(init_time, target_date, max_window=max_window)
     if not fxx_list:
         return None
     valid_times, temps_k = fetcher(init_time, fxx_list)
@@ -259,17 +281,35 @@ def latest_ensemble(
     max_members: int = DEFAULT_MAX_MEMBERS,
     fetcher=fetch_run_2m_temp,
     max_window: tuple[int, int] = MAX_WINDOW,
+    max_workers: int = 6,
 ) -> HRRREnsemble:
-    """Assemble the time-lagged ensemble for target_date as of `as_of` (default now)."""
+    """Assemble the time-lagged ensemble for target_date as of `as_of` (default now).
+
+    Members are fetched concurrently (network-bound I/O). Warnings are emitted from
+    the calling thread only — warnings.catch_warnings is not thread-safe — so workers
+    return any exception for the caller to report."""
     as_of = as_of or dt.datetime.now(UTC)
     inits = select_run_init_times(
         target_date, as_of, max_members=max_members, max_window=max_window
     )
-    members: list[HRRRMember] = []
-    for init in inits:
+
+    def _build(init):
         try:
             m = member_for_run(init, target_date, fetcher=fetcher, max_window=max_window)
-        except Exception as exc:
+            return init, m, None
+        except Exception as exc:  # noqa: BLE001 — reported as a warning below
+            return init, None, exc
+
+    if max_workers and max_workers > 1 and len(inits) > 1:
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=max_workers) as ex:
+            results = list(ex.map(_build, inits))  # ex.map preserves input order
+    else:
+        results = [_build(init) for init in inits]
+
+    members: list[HRRRMember] = []
+    for init, m, exc in results:
+        if exc is not None:
             warnings.warn(f"skipping HRRR run {init.isoformat()}: {exc}", stacklevel=2)
             continue
         if m is not None:

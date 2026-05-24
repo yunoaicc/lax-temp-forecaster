@@ -86,6 +86,25 @@ def test_daily_high_ignores_other_days():
     assert n == len(hours)
 
 
+def test_fxx_in_window_only_padded_afternoon_hours():
+    # 06Z run on 2026-06-15 -> local init 2026-06-14 23:00 PDT.
+    # Padded window 12-17 PDT on 2026-06-15 corresponds to fxx 13..18.
+    init = dt.datetime(2026, 6, 15, 6, tzinfo=UTC)
+    fxxs = hrrr.fxx_in_window(init, dt.date(2026, 6, 15))
+    local_hours = [
+        (init + dt.timedelta(hours=f)).astimezone(hrrr.PACIFIC).hour for f in fxxs
+    ]
+    assert local_hours == [12, 13, 14, 15, 16, 17]
+    # strict subset of the whole-day coverage (the speedup)
+    assert set(fxxs).issubset(set(hrrr.fxx_covering_target(init, dt.date(2026, 6, 15))))
+    # still a superset of the required max window {13,14,15,16}
+    required_fxx = {
+        f for f in hrrr.fxx_covering_target(init, dt.date(2026, 6, 15))
+        if 13 <= (init + dt.timedelta(hours=f)).astimezone(hrrr.PACIFIC).hour <= 16
+    }
+    assert required_fxx.issubset(set(fxxs))
+
+
 def test_fxx_covering_target_for_06z_run():
     # 06Z run on 2026-06-15 -> local init 2026-06-14 23:00 PDT.
     # Forecast hours whose valid LOCAL date is 2026-06-15 are fxx 1..24.
@@ -248,6 +267,20 @@ def test_latest_ensemble_skips_failing_runs_but_keeps_others():
     assert ens.n_members == 2
 
 
+def test_latest_ensemble_concurrent_matches_serial():
+    as_of = dt.datetime(2026, 6, 15, 18, tzinfo=UTC)
+    serial = hrrr.latest_ensemble(
+        dt.date(2026, 6, 15), as_of=as_of, max_members=3,
+        fetcher=_fake_fetcher, max_workers=1,
+    )
+    parallel = hrrr.latest_ensemble(
+        dt.date(2026, 6, 15), as_of=as_of, max_members=3,
+        fetcher=_fake_fetcher, max_workers=4,
+    )
+    assert [m.init_time for m in parallel.members] == [m.init_time for m in serial.members]
+    assert parallel.values_f.tolist() == serial.values_f.tolist()
+
+
 def test_decode_fixture_yields_plausible_klax_temp():
     """Offline decode-path check. Skips unless the [hrrr] extra is installed AND
     a real GRIB fixture has been captured (see the plan's one-time capture step)."""
@@ -261,3 +294,24 @@ def test_decode_fixture_yields_plausible_klax_temp():
     assert 230.0 <= tk <= 340.0
     f = hrrr.kelvin_to_fahrenheit(tk)
     assert 20.0 <= f <= 130.0  # plausible KLAX daytime range
+
+
+def test_member_for_run_high_is_afternoon_peak():
+    # Fetcher peaks at 15:00 PDT (inside the window): the member high must be that peak.
+    init = dt.datetime(2026, 6, 15, 16, tzinfo=UTC)  # local 09:00 PDT
+    target = dt.date(2026, 6, 15)
+
+    def peaked_fetcher(init_time, fxx_list, **kwargs):
+        iu = init_time if init_time.tzinfo else init_time.replace(tzinfo=UTC)
+        valid, temps = [], []
+        for f in fxx_list:
+            vt = iu + dt.timedelta(hours=int(f))
+            valid.append(vt)
+            temps.append(305.0 if vt.astimezone(hrrr.PACIFIC).hour == 15 else 300.0)
+        return valid, temps
+
+    m = hrrr.member_for_run(init, target, fetcher=peaked_fetcher)
+    assert m is not None
+    assert m.member_high_f == pytest.approx(hrrr.kelvin_to_fahrenheit(305.0))
+    # Only the padded window (12-17 PDT) is fetched: 6 hours, not the whole day.
+    assert m.n_valid_hours == 6

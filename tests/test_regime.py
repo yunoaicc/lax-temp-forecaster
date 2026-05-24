@@ -87,3 +87,36 @@ def test_fetch_morning_clouds_degrades_on_error():
             dt.date(2026, 6, 15), session=_FakeSession(raise_exc=RuntimeError("boom"))
         )
     assert out is None
+
+
+def test_detect_regime_stratus():
+    def fake(target_date, *, morning_hours=(6, 9)):
+        return [("OVC", 300.0)]
+    assert regime.detect_regime(dt.date(2026, 6, 15), fetcher=fake) == "stratus"
+
+
+def test_detect_regime_none_when_no_data():
+    def fake(target_date, *, morning_hours=(6, 9)):
+        return None
+    assert regime.detect_regime(dt.date(2026, 6, 15), fetcher=fake) is None
+
+
+def test_detect_regime_clear_when_empty():
+    def fake(target_date, *, morning_hours=(6, 9)):
+        return []
+    assert regime.detect_regime(dt.date(2026, 6, 15), fetcher=fake) == "clear"
+
+
+def test_regimes_for_dates_skips_no_data():
+    dates = [dt.date(2026, 6, 15), dt.date(2026, 6, 16), dt.date(2026, 6, 17)]
+
+    def fake(target_date, *, morning_hours=(6, 9)):
+        return {
+            dt.date(2026, 6, 15): [("OVC", 300.0)],
+            dt.date(2026, 6, 16): [],
+            dt.date(2026, 6, 17): None,
+        }[target_date]
+
+    out = regime.regimes_for_dates(dates, fetcher=fake)
+    # 6/15 -> stratus, 6/16 -> clear, 6/17 (None) skipped
+    assert out == {dt.date(2026, 6, 15): "stratus", dt.date(2026, 6, 16): "clear"}

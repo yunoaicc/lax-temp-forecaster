@@ -77,3 +77,31 @@ def fetch_morning_clouds(
             base_m = base.get("value") if isinstance(base, dict) else None
             layers.append((layer.get("amount"), base_m))
     return layers
+
+
+def detect_regime(
+    target_date: dt.date,
+    *,
+    morning_hours: tuple[int, int] = (6, 9),
+    low_base_m: float = 1000.0,
+    fetcher=fetch_morning_clouds,
+) -> str | None:
+    """Morning clouds -> classify_regime. None if there is no cloud data (the fetcher
+    returned None), so the caller falls back to pooled calibration."""
+    clouds = fetcher(target_date, morning_hours=morning_hours)
+    if clouds is None:
+        return None
+    return classify_regime(clouds, low_base_m=low_base_m)
+
+
+def regimes_for_dates(
+    dates: Iterable[dt.date], *, fetcher=fetch_morning_clouds, **kwargs
+) -> dict[dt.date, str]:
+    """Map each date to its detected regime; dates with no data (None) are skipped.
+    Use as: build_training_table(dates, regimes=regimes_for_dates(dates))."""
+    out: dict[dt.date, str] = {}
+    for d in dates:
+        label = detect_regime(d, fetcher=fetcher, **kwargs)
+        if label is not None:
+            out[d] = label
+    return out

@@ -47,14 +47,19 @@ def _cached_regime_dates() -> set[str]:
         return {row["date"] for row in csv.DictReader(f)}
 
 
-def _append_regime(target: dt.date, regime: str) -> None:
+def _save_regime(target: dt.date, regime: str) -> None:
+    """Upsert one date's regime (rewrites the small CSV, so reruns never duplicate)."""
     REGIME_CACHE.parent.mkdir(parents=True, exist_ok=True)
-    new = not REGIME_CACHE.exists()
-    with open(REGIME_CACHE, "a", newline="") as f:
+    rows: dict[str, str] = {}
+    if REGIME_CACHE.exists():
+        with open(REGIME_CACHE) as f:
+            rows = {r["date"]: r["regime"] for r in csv.DictReader(f)}
+    rows[target.isoformat()] = regime
+    with open(REGIME_CACHE, "w", newline="") as f:
         w = csv.writer(f)
-        if new:
-            w.writerow(["date", "regime"])
-        w.writerow([target.isoformat(), regime])
+        w.writerow(["date", "regime"])
+        for d in sorted(rows):
+            w.writerow([d, rows[d]])
 
 
 def main() -> int:
@@ -79,35 +84,33 @@ def main() -> int:
         p.error("Must pass --start or --days.")
 
     dates = [start + dt.timedelta(days=i) for i in range((end - start).days + 1)]
-    if not args.force:
-        skip = _cached_target_dates()  # member fetch is the expensive part
-        have_regimes = _cached_regime_dates()
-        dates = [d for d in dates if d not in skip]
-    else:
-        have_regimes = set()
+    # The expensive member fetch and the cheap regime fetch are skipped independently,
+    # so a date whose regime previously failed still gets filled on a later rerun.
+    have_members = set() if args.force else _cached_target_dates()
+    have_regimes = set() if args.force else _cached_regime_dates()
 
-    print(f"Backfilling {len(dates)} dates: "
-          f"{dates[0] if dates else '-'} -> {dates[-1] if dates else '-'}", file=sys.stderr)
+    print(f"Backfilling {len(dates)} dates: {dates[0]} -> {dates[-1]}", file=sys.stderr)
     total = 0
     for i, target in enumerate(dates):
-        as_of = dt.datetime.combine(
-            target, dt.time(args.decision_hour), tzinfo=PACIFIC
-        ).astimezone(UTC)
-        try:
-            ens = latest_ensemble(
-                target, as_of=as_of, max_members=args.max_members, max_workers=args.max_workers
-            )
-            save_members(ens.members)
-            total += ens.n_members
-            print(f"{target}: {ens.n_members} members (mean {ens.mean:.1f} F)", file=sys.stderr)
-        except LookupError as exc:
-            print(f"{target}: skipped ({exc})", file=sys.stderr)
-        # Regime is cheap and independent of the ensemble fetch.
+        if target not in have_members:
+            as_of = dt.datetime.combine(
+                target, dt.time(args.decision_hour), tzinfo=PACIFIC
+            ).astimezone(UTC)
+            try:
+                ens = latest_ensemble(
+                    target, as_of=as_of, max_members=args.max_members, max_workers=args.max_workers
+                )
+                save_members(ens.members)
+                total += ens.n_members
+                print(f"{target}: {ens.n_members} members (mean {ens.mean:.1f} F)", file=sys.stderr)
+            except LookupError as exc:
+                print(f"{target}: skipped ({exc})", file=sys.stderr)
+        # Regime is cheap and independent of the (possibly cached) ensemble.
         if target.isoformat() not in have_regimes:
             try:
                 r = detect_regime(target)
                 if r is not None:
-                    _append_regime(target, r)
+                    _save_regime(target, r)
             except Exception as exc:  # noqa: BLE001
                 print(f"{target}: regime skipped ({exc})", file=sys.stderr)
         if (i + 1) % 10 == 0:

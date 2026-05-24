@@ -147,9 +147,9 @@ def fetch_quotes(
             m = r.json()["market"]
             out.append(Quote(
                 ticker=ticker,
-                yes_bid=int(m["yes_bid"]),
-                yes_ask=int(m["yes_ask"]),
-                last=m.get("last_price"),
+                yes_bid=int(round(float(m["yes_bid_dollars"]) * 100)),
+                yes_ask=int(round(float(m["yes_ask_dollars"]) * 100)),
+                last=int(round(float(m["last_price_dollars"]) * 100)) if m.get("last_price_dollars") else None,
             ))
         except Exception as exc:
             warnings.warn(f"skipping quote for {ticker}: {exc}", stacklevel=2)

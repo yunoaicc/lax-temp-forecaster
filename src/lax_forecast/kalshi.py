@@ -1,18 +1,19 @@
-"""Layer 5b — compare our fair value to live Kalshi LAHIGH quotes (read-only).
+"""Layer 5b — live Kalshi LAHIGH quotes, edge detection, and order placement.
 
 The pure edge engine (add_edges) and the find_edges orchestrator are offline-tested
-via an injected quote fetcher. The live fetch_quotes adapter signs read-only GETs
-with RSA-PSS (cryptography, behind the [kalshi] extra, imported lazily) so importing
-this module never requires cryptography. No order placement anywhere in this module.
+via an injected quote fetcher. The live adapters sign requests with RSA-PSS
+(cryptography, behind the [kalshi] extra, imported lazily).
 """
 from __future__ import annotations
 
+import datetime as dt
 import importlib
 import os
 import warnings
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
+from zoneinfo import ZoneInfo
 
 import numpy as np
 import pandas as pd
@@ -184,3 +185,114 @@ def find_edges(
     quotes = fetcher(book["ticker"].tolist(), auth=auth)
     merged = book.merge(quotes_to_frame(quotes), on="ticker", how="left")
     return add_edges(merged, min_edge_cents=min_edge_cents)
+
+
+# ---------------------------------------------------------------------------
+# Live market helpers (pipeline use)
+# ---------------------------------------------------------------------------
+
+_PACIFIC = ZoneInfo("America/Los_Angeles")
+
+
+def today_event_ticker(target_date: dt.date | None = None) -> str:
+    """Return the Kalshi event ticker for a date, e.g. 'KXHIGHLAX-26MAY24'."""
+    d = target_date or dt.datetime.now(_PACIFIC).date()
+    return f"KXHIGHLAX-{d.strftime('%y')}{d.strftime('%b').upper()}{d.strftime('%d')}"
+
+
+def _parse_cents(v) -> int | None:
+    """Parse a Kalshi price field to integer cents.
+
+    Handles int (already cents), float <= 1.0 (dollars), and dict with a
+    'close' or 'close_dollars' sub-key (candlestick format)."""
+    if v is None:
+        return None
+    if isinstance(v, dict):
+        v = v.get("close") or v.get("close_dollars")
+    if v is None:
+        return None
+    f = float(v)
+    return int(round(f * 100)) if f <= 1.0 else int(round(f))
+
+
+def _signed_get(
+    path: str,
+    *,
+    auth: KalshiAuth,
+    base_url: str = KALSHI_API_BASE,
+    session=None,
+    timeout: int = 25,
+) -> dict:
+    import time
+    import requests as _req
+
+    _require_cryptography()
+    s = session or _req.Session()
+    ts = str(int(time.time() * 1000))
+    headers = {
+        "KALSHI-ACCESS-KEY": auth.key_id,
+        "KALSHI-ACCESS-SIGNATURE": _sign(auth.private_key_pem, ts, "GET", path),
+        "KALSHI-ACCESS-TIMESTAMP": ts,
+    }
+    r = s.get(base_url + path, headers=headers, timeout=timeout)
+    r.raise_for_status()
+    return r.json()
+
+
+def fetch_market_ladder(
+    event_ticker: str,
+    *,
+    auth: KalshiAuth,
+    base_url: str = KALSHI_API_BASE,
+) -> list[dict]:
+    """Return all markets for today's LAHIGH event with their current bid/ask.
+
+    Each dict includes at minimum: ticker, floor_strike, cap_strike.
+    yes_bid / yes_ask are present when the API returns live quotes inline;
+    absent markets fall back to per-ticker fetch_quotes in the pipeline."""
+    path = f"/trade-api/v2/markets?event_ticker={event_ticker}&limit=200"
+    return _signed_get(path, auth=auth, base_url=base_url).get("markets", [])
+
+
+def place_order(
+    ticker: str,
+    side: str,
+    count: int,
+    price_cents: int,
+    *,
+    client_order_id: str,
+    auth: KalshiAuth,
+    base_url: str = KALSHI_API_BASE,
+) -> dict:
+    """Submit a limit order and return the Kalshi response dict.
+
+    side='buy'  → buy YES contracts at yes_ask (price_cents = yes_ask).
+    side='sell' → buy NO  contracts at 100-yes_bid (price_cents = 100-yes_bid).
+    """
+    import time
+    import requests as _req
+
+    _require_cryptography()
+    kalshi_side = "yes" if side == "buy" else "no"
+    price_key = "yes_price" if side == "buy" else "no_price"
+    body = {
+        "ticker": ticker,
+        "client_order_id": client_order_id,
+        "type": "limit",
+        "action": "buy",
+        "side": kalshi_side,
+        "count": count,
+        price_key: price_cents,
+    }
+    path = "/trade-api/v2/portfolio/orders"
+    ts = str(int(time.time() * 1000))
+    headers = {
+        "KALSHI-ACCESS-KEY": auth.key_id,
+        "KALSHI-ACCESS-SIGNATURE": _sign(auth.private_key_pem, ts, "POST", path),
+        "KALSHI-ACCESS-TIMESTAMP": ts,
+        "Content-Type": "application/json",
+    }
+    s = _req.Session()
+    r = s.post(base_url + path, headers=headers, json=body, timeout=15)
+    r.raise_for_status()
+    return r.json()

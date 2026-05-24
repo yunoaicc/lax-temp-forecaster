@@ -19,9 +19,9 @@ env/
 .ipynb_checkpoints/
 *.ipynb_checkpoints
 
-# Data
-data/raw/*.csv
-data/processed/*.csv
+# Data caches (raw GRIB/HDF/CSV downloads + processed CSVs) — large + machine-local
+data/raw/*
+data/processed/*
 !data/raw/.gitkeep
 !data/processed/.gitkeep
 

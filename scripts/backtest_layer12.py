@@ -31,8 +31,8 @@ def main() -> int:
     args = p.parse_args()
 
     actuals = load_lax_history().df["tmax_f"]
-    actuals.index = pd.to_datetime(actuals.index).date
-    actual_map = actuals.to_dict()
+    actuals.index = pd.to_datetime(actuals.index)
+    actual_map = {ts.date(): v for ts, v in actuals.items()}
 
     forecasts = calibration.load_pfm_archive()
     forecasts["target_date"] = pd.to_datetime(forecasts["target_date"]).dt.date
@@ -50,7 +50,7 @@ def main() -> int:
         return 0
     test_start = min(test_dates)
 
-    train_actuals = actuals[[d < test_start for d in actuals.index]]
+    train_actuals = actuals[actuals.index < pd.Timestamp(test_start)]
     clim = Climatology(train_actuals)
 
     train_fc = forecasts[forecasts["target_date"].isin(train_dates)]

@@ -32,3 +32,48 @@ def classify_regime(
         if amount in STRATUS_AMOUNTS and base_m is not None and base_m <= low_base_m:
             return "stratus"
     return "clear"
+
+
+def fetch_morning_clouds(
+    target_date: dt.date,
+    *,
+    morning_hours: tuple[int, int] = (6, 9),
+    session=None,
+) -> "list[tuple[str, float | None]] | None":
+    """Cloud layers (amount, base_m) from KLAX observations in the morning window
+    (morning_hours local PT), via api.weather.gov. Returns None when NO observations
+    could be retrieved (failure or zero features) = 'no data'; a (possibly empty) list
+    when observations exist (empty = clear). NETWORK."""
+    import requests
+
+    start_utc = dt.datetime.combine(
+        target_date, dt.time(morning_hours[0]), tzinfo=PACIFIC
+    ).astimezone(UTC)
+    end_utc = dt.datetime.combine(
+        target_date, dt.time(morning_hours[1]), tzinfo=PACIFIC
+    ).astimezone(UTC)
+
+    s = session or requests.Session()
+    s.headers.update({"User-Agent": USER_AGENT, "Accept": "application/geo+json"})
+    try:
+        r = s.get(
+            f"{NWS_API_BASE}/stations/{KLAX_STATION}/observations",
+            params={"start": start_utc.isoformat(), "end": end_utc.isoformat()},
+            timeout=30,
+        )
+        r.raise_for_status()
+        features = r.json().get("features", [])
+    except Exception as exc:
+        warnings.warn(f"failed to fetch KLAX observations: {exc}", stacklevel=2)
+        return None
+
+    if not features:
+        return None
+
+    layers: list[tuple[str, float | None]] = []
+    for f in features:
+        for layer in f.get("properties", {}).get("cloudLayers", []) or []:
+            base = layer.get("base") or {}
+            base_m = base.get("value") if isinstance(base, dict) else None
+            layers.append((layer.get("amount"), base_m))
+    return layers

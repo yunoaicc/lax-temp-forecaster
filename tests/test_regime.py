@@ -34,3 +34,56 @@ def test_classify_empty_is_clear():
 
 def test_classify_unknown_base_is_clear():
     assert regime.classify_regime([("OVC", None)]) == "clear"  # unknown base -> not low
+
+
+class _FakeResp:
+    def __init__(self, payload):
+        self._p = payload
+
+    def raise_for_status(self):
+        pass
+
+    def json(self):
+        return self._p
+
+
+class _FakeSession:
+    def __init__(self, payload=None, raise_exc=None):
+        self.headers = {}
+        self._payload = payload
+        self._raise = raise_exc
+
+    def get(self, url, params=None, timeout=None):
+        if self._raise is not None:
+            raise self._raise
+        return _FakeResp(self._payload)
+
+
+def test_fetch_morning_clouds_parses_layers():
+    payload = {"features": [
+        {"properties": {"cloudLayers": [{"amount": "OVC", "base": {"value": 300.0}}]}},
+        {"properties": {"cloudLayers": [{"amount": "SCT", "base": {"value": 1500.0}}]}},
+    ]}
+    out = regime.fetch_morning_clouds(dt.date(2026, 6, 15), session=_FakeSession(payload=payload))
+    assert ("OVC", 300.0) in out
+    assert ("SCT", 1500.0) in out
+
+
+def test_fetch_morning_clouds_no_features_is_none():
+    out = regime.fetch_morning_clouds(dt.date(2026, 6, 15), session=_FakeSession(payload={"features": []}))
+    assert out is None
+
+
+def test_fetch_morning_clouds_features_without_layers_is_empty_list():
+    # observations present but no cloudLayers -> [] (clear), NOT None (no data)
+    payload = {"features": [{"properties": {}}]}
+    out = regime.fetch_morning_clouds(dt.date(2026, 6, 15), session=_FakeSession(payload=payload))
+    assert out == []
+
+
+def test_fetch_morning_clouds_degrades_on_error():
+    with pytest.warns(UserWarning, match="observations"):
+        out = regime.fetch_morning_clouds(
+            dt.date(2026, 6, 15), session=_FakeSession(raise_exc=RuntimeError("boom"))
+        )
+    assert out is None

@@ -31,3 +31,23 @@ def crps(dist: DistributionSummary, actual: int) -> float:
         h = 1.0 if x >= a else 0.0
         total += (cdf - h) ** 2
     return total
+
+
+def log_loss(dist: DistributionSummary, actual: int) -> float:
+    """-log(P(T == actual)) with an eps floor so a near-zero/absent bin is finite."""
+    a = int(round(actual))
+    temps = np.asarray(dist.temps_f)
+    probs = np.asarray(dist.probs, dtype=float)
+    mask = temps == a
+    p = float(probs[mask].sum()) if mask.any() else 0.0
+    return -math.log(max(p, _LOG_LOSS_EPS))
+
+
+def pit_value(dist: DistributionSummary, actual: int) -> float:
+    """Mid-PIT = P(T < actual) + 0.5 * P(T == actual); ~Uniform(0,1) under calibration."""
+    a = int(round(actual))
+    temps = np.asarray(dist.temps_f)
+    probs = np.asarray(dist.probs, dtype=float)
+    below = float(probs[temps < a].sum())
+    at = float(probs[temps == a].sum())
+    return below + 0.5 * at

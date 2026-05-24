@@ -12,7 +12,7 @@ This repo builds that distribution in layers:
 |---|---|---|---|
 | 1 — Climatology | Day-of-year empirical distribution from 20 years of history | NCEI daily summaries for USW00023174 | ✅ |
 | 2 — NWS baseline | NWS forecast for KLAX, bias-corrected with empirical residual distribution per lead-time bucket | weather.gov API + Iowa State PFM archive | ✅ |
-| 3 — HRRR post-processing | Calibrated distribution from HRRR ensemble, with marine layer regime | NOAA NOMADS, GOES-18, KNKX/KVBG soundings | ⏳ (ingestion + calibration ✅) |
+| 3 — HRRR post-processing | Calibrated distribution from HRRR ensemble, with marine layer regime | NOAA NOMADS, GOES-18, KNKX/KVBG soundings | ⏳ (ingestion + regime-conditional calibration ✅) |
 | 4 — Intraday nowcast | Real-time updates conditioning on observed temperature trajectory | METAR feed | ⏳ (max-so-far truncation ✅) |
 | 5 — Strike pricing | Convert distribution → P(payout) per strike → mispricing vs. market | Layer 4 + Kalshi quotes | ⏳ (pricing + mispricing ✅) |
 

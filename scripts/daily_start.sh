@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+# Daily morning setup: pull latest code, backfill HRRR + regime, start pipeline.
+#
+# Cron: 0 13 * * *  (13:00 UTC = 06:00 PDT / 05:00 PST)
+set -euo pipefail
+
+REPO="$HOME/lax-temp-forecaster"
+VENV="$REPO/.venv/bin/activate"
+LOG_DIR="$REPO/data/live"
+PID_FILE="$LOG_DIR/pipeline.pid"
+TODAY=$(TZ=America/Los_Angeles date +%Y-%m-%d)
+
+mkdir -p "$LOG_DIR"
+exec >> "$LOG_DIR/cron.log" 2>&1
+
+echo ""
+echo "=== daily_start.sh  $(date -u '+%Y-%m-%dT%H:%M:%S UTC')  date=$TODAY ==="
+
+# Kalshi credentials (sets KALSHI_API_KEY_ID and KALSHI_PRIVATE_KEY_PATH)
+# shellcheck source=/dev/null
+source "$HOME/.kalshi/env"
+
+# Stop previous pipeline if still running
+if [ -f "$PID_FILE" ]; then
+    OLD_PID=$(cat "$PID_FILE")
+    if kill -0 "$OLD_PID" 2>/dev/null; then
+        echo "Stopping old pipeline PID=$OLD_PID"
+        kill "$OLD_PID"
+        sleep 3
+    fi
+    rm -f "$PID_FILE"
+fi
+
+# Pull latest code
+cd "$REPO"
+git pull --ff-only
+
+# Activate venv
+# shellcheck source=/dev/null
+source "$VENV"
+
+# Backfill today's HRRR members (pipeline won't start without them)
+echo "Backfilling HRRR for $TODAY..."
+python scripts/backfill_hrrr.py --start "$TODAY" --end "$TODAY"
+
+# Classify today's marine-layer regime (06:00-09:00 PT METAR window now complete)
+echo "Backfilling regime for $TODAY..."
+python scripts/backfill_regimes_asos.py --start "$TODAY" --end "$TODAY"
+
+# Pipeline args — add "--trade" to EXTRA_ARGS to enable live order placement
+EXTRA_ARGS=()
+# EXTRA_ARGS=(--trade)
+
+echo "Starting pipeline..."
+nohup python scripts/pipeline.py \
+    --min-edge 5 \
+    --bankroll 1000 \
+    --poll-interval 300 \
+    "${EXTRA_ARGS[@]}" \
+    >> "$LOG_DIR/pipeline_${TODAY}.log" 2>&1 &
+echo $! > "$PID_FILE"
+echo "Pipeline started PID=$(cat "$PID_FILE")"

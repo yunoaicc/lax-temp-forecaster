@@ -9,8 +9,6 @@ import pytest
 
 from lax_forecast import regime
 
-UTC = dt.timezone.utc
-
 
 def test_classify_low_ovc_is_stratus():
     assert regime.classify_regime([("OVC", 300.0)]) == "stratus"
@@ -34,6 +32,11 @@ def test_classify_empty_is_clear():
 
 def test_classify_unknown_base_is_clear():
     assert regime.classify_regime([("OVC", None)]) == "clear"  # unknown base -> not low
+
+
+def test_classify_boundary_base_is_stratus():
+    # base exactly at the 1000 m threshold is inclusive -> stratus
+    assert regime.classify_regime([("OVC", 1000.0)]) == "stratus"
 
 
 class _FakeResp:

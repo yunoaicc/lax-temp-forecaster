@@ -31,9 +31,10 @@ if [ -f "$PID_FILE" ]; then
     rm -f "$PID_FILE"
 fi
 
-# Pull latest code
+# Pull latest code (ssh:// remote bypasses boxd's insteadOf rewrite; key is read-only deploy key)
 cd "$REPO"
-git pull --ff-only
+GIT_SSH_COMMAND="ssh -i $HOME/.ssh/github_deploy -o StrictHostKeyChecking=no" \
+    git pull --ff-only
 
 # Activate venv
 # shellcheck source=/dev/null

@@ -58,3 +58,25 @@ def test_pit_value_symmetric_centre_is_half():
 def test_pit_value_actual_above_support_is_one():
     d = _dist([70], [1.0])
     assert backtest.pit_value(d, 71) == pytest.approx(1.0)  # all mass strictly below
+
+
+def test_coverage_counts_central_interval():
+    # uniform on 60..64: quantile(0.25)=61, quantile(0.75)=63 -> central-50% = [61,63]
+    d = _dist([60, 61, 62, 63, 64], [0.2] * 5)
+    records = [(d, 62), (d, 60)]   # 62 in [61,63] (hit); 60 outside (miss)
+    assert backtest.coverage(records, 0.5) == pytest.approx(0.5)
+
+
+def test_score_forecasts_aggregates():
+    d = _dist([70], [1.0])
+    out = backtest.score_forecasts([(d, 70), (d, 72)])  # CRPS 0 and 2 -> mean 1.0
+    assert out["n"] == 2
+    assert out["crps"] == pytest.approx(1.0)
+    assert "log_loss" in out
+    assert "coverage_50" in out and "coverage_90" in out
+
+
+def test_score_forecasts_empty():
+    out = backtest.score_forecasts([])
+    assert out["n"] == 0
+    assert np.isnan(out["crps"])

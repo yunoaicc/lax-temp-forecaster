@@ -76,10 +76,7 @@ class HRRRCalibrator:
         self._z_by_regime: dict[str, np.ndarray] = {}
         if "regime" in t.columns:
             regimes = t["regime"].to_numpy(object)
-            labels = {
-                r for r in regimes
-                if r is not None and not (isinstance(r, float) and np.isnan(r))
-            }
+            labels = {r for r in regimes if not pd.isna(r)}
             for label in labels:
                 bucket = self._z[regimes == label]
                 if len(bucket) >= min_regime_obs:
@@ -126,7 +123,8 @@ class HRRRCalibrator:
     def calibrate_ensemble(
         self, ens: HRRREnsemble, *, regime: str | None = None, smoothing_eps: float = 0.0
     ) -> DistributionSummary:
-        """Convenience: pull mean/spread off the ensemble and calibrate."""
+        """Convenience: pull mean/spread off the ensemble and calibrate, forwarding
+        the optional regime label."""
         if ens.n_members < 2:
             warnings.warn(
                 f"ensemble for {ens.target_date} has {ens.n_members} member(s); "

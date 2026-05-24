@@ -249,3 +249,10 @@ def test_build_training_table_no_regime_column_without_regimes():
     actuals = pd.Series([82.0], index=pd.DatetimeIndex(targets))
     table = hc.build_training_table(targets, fetcher=_fake_fetcher, actuals=actuals)
     assert "regime" not in table.columns
+
+
+def test_regime_support_includes_exact_threshold():
+    table = _training_table_with_regime({"stratus": [0.0] * 4, "clear": [1.0] * 3})
+    calib = hc.HRRRCalibrator(table, min_obs=3, min_regime_obs=4)
+    # stratus has exactly 4 (== threshold) -> included; clear 3 (< 4) -> excluded
+    assert calib.regime_support() == {"stratus": 4}

@@ -79,8 +79,10 @@ Notes:
 
 ## Layer 1/2 evaluation script (`scripts/backtest_layer12.py`)
 
-- `--test-years N` (default 2): the most recent N years of actuals are the test set;
-  everything before is train. (Leakage-free temporal split.)
+- `--test-frac F` (default 0.25): the most-recent fraction F of PFM target dates is the
+  test set; everything before is train. (A fraction rather than a fixed number of years,
+  because the PFM archive is far shorter than the 20-yr NCEI history. Leakage-free
+  temporal split.)
 - **Layer 1 (climatology):** build `Climatology` from the TRAIN actuals only; for each
   test day, `climatology.distribution(date)` → score vs the actual.
 - **Layer 2 (NWS calibrated):** build the `ForecastCalibrator` from TRAIN-period PFM

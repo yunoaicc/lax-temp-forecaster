@@ -280,3 +280,24 @@ def test_decode_fixture_yields_plausible_klax_temp():
     assert 230.0 <= tk <= 340.0
     f = hrrr.kelvin_to_fahrenheit(tk)
     assert 20.0 <= f <= 130.0  # plausible KLAX daytime range
+
+
+def test_member_for_run_high_is_afternoon_peak():
+    # Fetcher peaks at 15:00 PDT (inside the window): the member high must be that peak.
+    init = dt.datetime(2026, 6, 15, 16, tzinfo=UTC)  # local 09:00 PDT
+    target = dt.date(2026, 6, 15)
+
+    def peaked_fetcher(init_time, fxx_list, **kwargs):
+        iu = init_time if init_time.tzinfo else init_time.replace(tzinfo=UTC)
+        valid, temps = [], []
+        for f in fxx_list:
+            vt = iu + dt.timedelta(hours=int(f))
+            valid.append(vt)
+            temps.append(305.0 if vt.astimezone(hrrr.PACIFIC).hour == 15 else 300.0)
+        return valid, temps
+
+    m = hrrr.member_for_run(init, target, fetcher=peaked_fetcher)
+    assert m is not None
+    assert m.member_high_f == pytest.approx(hrrr.kelvin_to_fahrenheit(305.0))
+    # Only the padded window (12-17 PDT) is fetched: 6 hours, not the whole day.
+    assert m.n_valid_hours == 6

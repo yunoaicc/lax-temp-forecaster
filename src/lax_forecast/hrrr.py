@@ -257,7 +257,7 @@ def member_for_run(
     max_window: tuple[int, int] = MAX_WINDOW,
 ) -> HRRRMember | None:
     """Build one ensemble member (or None if the run does not cover the day)."""
-    fxx_list = fxx_covering_target(init_time, target_date)
+    fxx_list = fxx_in_window(init_time, target_date, max_window=max_window)
     if not fxx_list:
         return None
     valid_times, temps_k = fetcher(init_time, fxx_list)

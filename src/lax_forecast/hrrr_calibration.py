@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import datetime as dt
 import warnings
-from typing import Iterable
+from typing import Iterable, Mapping
 
 import numpy as np
 import pandas as pd
@@ -158,17 +158,21 @@ def build_training_table(
     decision_time_hour: int = DEFAULT_DECISION_HOUR,
     fetcher=fetch_run_2m_temp,
     actuals: pd.Series | None = None,
+    regimes: "Mapping[dt.date, str] | None" = None,
 ) -> pd.DataFrame:
     """One row per day: (ensemble assembled at decision_time_hour PT) joined to actuals.
 
-    Days with no ensemble (LookupError) or no actual are dropped.
-    """
+    Days with no ensemble (LookupError) or no actual are dropped. If `regimes` is
+    given, a `regime` column maps target_date -> label (NaN for unmapped dates);
+    when `regimes` is None the columns are exactly TRAINING_COLUMNS."""
     if actuals is None:
         from .data import load_lax_history
         actuals = load_lax_history().df["tmax_f"]
     actuals = actuals.copy()
     actuals.index = pd.to_datetime(actuals.index).date
     actual_map = actuals.to_dict()
+
+    out_cols = list(TRAINING_COLUMNS) + (["regime"] if regimes is not None else [])
 
     rows = []
     for target in target_dates:
@@ -187,9 +191,11 @@ def build_training_table(
         })
 
     if not rows:
-        return pd.DataFrame(columns=TRAINING_COLUMNS)
+        return pd.DataFrame(columns=out_cols)
 
     df = pd.DataFrame(rows)
     df["actual_high_f"] = df["target_date"].map(actual_map)
     df = df.dropna(subset=["actual_high_f"]).reset_index(drop=True)
-    return df[TRAINING_COLUMNS]
+    if regimes is not None:
+        df["regime"] = df["target_date"].map(dict(regimes))
+    return df[out_cols]

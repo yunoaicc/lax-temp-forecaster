@@ -229,3 +229,23 @@ def test_calibrate_backcompat_regime_without_buckets():
         d = calib.calibrate(70.0, 1.0, regime="stratus")
     np.testing.assert_allclose(d.probs, pooled.probs)
     np.testing.assert_array_equal(d.temps_f, pooled.temps_f)
+
+
+def test_build_training_table_adds_regime_column_when_provided():
+    targets = [dt.date(2026, 6, 15), dt.date(2026, 6, 16)]
+    actuals = pd.Series([82.0, 84.0], index=pd.DatetimeIndex(targets))
+    regimes = {dt.date(2026, 6, 15): "stratus"}  # 6/16 intentionally unmapped
+    table = hc.build_training_table(
+        targets, fetcher=_fake_fetcher, actuals=actuals, regimes=regimes
+    )
+    assert "regime" in table.columns
+    by_date = table.set_index("target_date")["regime"]
+    assert by_date[dt.date(2026, 6, 15)] == "stratus"
+    assert pd.isna(by_date[dt.date(2026, 6, 16)])  # unmapped -> NaN
+
+
+def test_build_training_table_no_regime_column_without_regimes():
+    targets = [dt.date(2026, 6, 15)]
+    actuals = pd.Series([82.0], index=pd.DatetimeIndex(targets))
+    table = hc.build_training_table(targets, fetcher=_fake_fetcher, actuals=actuals)
+    assert "regime" not in table.columns

@@ -91,6 +91,28 @@ def fxx_covering_target(
     return out
 
 
+def fxx_in_window(
+    init_time: dt.datetime,
+    target_date: dt.date,
+    *,
+    max_window: tuple[int, int] = MAX_WINDOW,
+    pad: int = 1,
+) -> list[int]:
+    """Forecast hours of a run whose valid LOCAL time falls in the padded afternoon
+    max window on target_date. A superset of the hours daily_high_from_series requires
+    (so the computed daily high is unchanged) but far fewer GRIB fetches than the
+    whole-day fxx_covering_target."""
+    init_utc = _as_utc(init_time)
+    fmax = expected_max_fxx(init_utc.hour)
+    lo, hi = max_window[0] - pad, max_window[1] + pad
+    out = []
+    for fxx in range(0, fmax + 1):
+        local = (init_utc + dt.timedelta(hours=fxx)).astimezone(PACIFIC)
+        if local.date() == target_date and lo <= local.hour <= hi:
+            out.append(fxx)
+    return out
+
+
 def select_run_init_times(
     target_date: dt.date,
     as_of: dt.datetime,

@@ -86,6 +86,25 @@ def test_daily_high_ignores_other_days():
     assert n == len(hours)
 
 
+def test_fxx_in_window_only_padded_afternoon_hours():
+    # 06Z run on 2026-06-15 -> local init 2026-06-14 23:00 PDT.
+    # Padded window 12-17 PDT on 2026-06-15 corresponds to fxx 13..18.
+    init = dt.datetime(2026, 6, 15, 6, tzinfo=UTC)
+    fxxs = hrrr.fxx_in_window(init, dt.date(2026, 6, 15))
+    local_hours = [
+        (init + dt.timedelta(hours=f)).astimezone(hrrr.PACIFIC).hour for f in fxxs
+    ]
+    assert local_hours == [12, 13, 14, 15, 16, 17]
+    # strict subset of the whole-day coverage (the speedup)
+    assert set(fxxs).issubset(set(hrrr.fxx_covering_target(init, dt.date(2026, 6, 15))))
+    # still a superset of the required max window {13,14,15,16}
+    required_fxx = {
+        f for f in hrrr.fxx_covering_target(init, dt.date(2026, 6, 15))
+        if 13 <= (init + dt.timedelta(hours=f)).astimezone(hrrr.PACIFIC).hour <= 16
+    }
+    assert required_fxx.issubset(set(fxxs))
+
+
 def test_fxx_covering_target_for_06z_run():
     # 06Z run on 2026-06-15 -> local init 2026-06-14 23:00 PDT.
     # Forecast hours whose valid LOCAL date is 2026-06-15 are fxx 1..24.

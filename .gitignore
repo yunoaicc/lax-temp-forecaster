@@ -22,8 +22,10 @@ env/
 # Data caches (raw GRIB/HDF/CSV downloads + processed CSVs) — large + machine-local
 data/raw/*
 data/processed/*
+data/live/*
 !data/raw/.gitkeep
 !data/processed/.gitkeep
+!data/live/.gitkeep
 
 # OS
 .DS_Store

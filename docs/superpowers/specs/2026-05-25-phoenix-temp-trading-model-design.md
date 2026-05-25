@@ -18,8 +18,10 @@ Build a Kalshi temperature trading pipeline for Phoenix (`KXHIGHTPHX`) using the
 - **Rulebook:** GLOBALTEMPERATURE
 - **Payout:** Binary event contracts (above / below / between strike), $1.00 settlement
 - **Kalshi series:** `KXHIGHTPHX`; ticker format `KXHIGHTPHX-YYMONDD`
-- **Last Trading Time:** One minute before the end of the trading day (`<time period>`). The exact close timezone is not stated in the generic rulebook and must be verified on the KXHIGHTPHX market page. Working assumption: **11:59 PM PT** (America/Los_Angeles), consistent with LAX. If Kalshi defines the PHX time period in MST, close = 11:59 PM MST instead.
-- **Expiration time:** 10:00 AM ET (Kalshi reads the NWS daily climate report at this time)
+- **Last Trading Time:** **11:59 PM local time (MST = America/Phoenix)** — confirmed on the KXHIGHTPHX market page: "The Last Trading Time will be 11:59 PM local time." Arizona observes no DST, so this is UTC-7 year-round.
+- **Market open:** 10:00 AM EDT each day
+- **Expiration:** Sooner of first 7:00 or 8:00 AM ET after NWS data release, or one week after the trading date
+- **Expiration fallback:** No later than 3:00 AM EDT the following day
 - **Settlement station:** KPHX (NCEI ID: USW00023183)
 - **Resolution:** First official non-preliminary NWS report; no revisions after expiration
 - **Position accountability level:** $25,000 per strike, per Member
@@ -43,7 +45,7 @@ KALSHI_SERIES = "KXHIGHTPHX"
 NWS_WFO = "psr"
 PFM_PIL = "PFMPSR"
 ARIZONA = ZoneInfo("America/Phoenix")   # UTC-7 year-round, no DST
-KALSHI_CLOSE_TZ = ZoneInfo("America/Los_Angeles")  # Kalshi states close time in PT
+# No separate KALSHI_CLOSE_TZ needed — close is 11:59 PM MST = same as ARIZONA
 ```
 
 ### Module-by-Module Changes
@@ -53,7 +55,7 @@ KALSHI_CLOSE_TZ = ZoneInfo("America/Los_Angeles")  # Kalshi states close time in
 | `pyproject.toml` | `name = "phx-forecast"`, updated description |
 | `src/phx_forecast/` | Renamed from `chi_forecast`; all internal imports updated |
 | `regime.py` | Replace `classify_lake_breeze` with `classify_monsoon` (see below) |
-| `kalshi.py` | `KXHIGHTPHX` series; close-time check uses `America/Los_Angeles` |
+| `kalshi.py` | `KXHIGHTPHX` series; close-time check uses `America/Phoenix` (MST = local) |
 | `data.py` | NCEI station `USW00023183`; cache `data/processed/phx/` |
 | `hrrr.py` | Grid point 33.44°N, 112.01°W |
 | `nowcast.py` | Station `KPHX`; timezone `America/Phoenix` |
@@ -119,18 +121,17 @@ def detect_regime(date: dt.date) -> str:
 
 ## Close-Time Timezone Note
 
-Arizona does not observe DST, so `America/Phoenix` is permanently UTC-7. Kalshi states contract close times in Pacific time:
+Confirmed on the KXHIGHTPHX market page: **"The Last Trading Time will be 11:59 PM local time."** Phoenix local time is `America/Phoenix` (MST, UTC-7 year-round — no DST). This means close = 23:59 MST always, with no seasonal adjustment needed.
 
-- **Summer (PDT = UTC-7):** 11:59 PM PT = 11:59 PM MST — same clock time
-- **Winter (PST = UTC-8):** 11:59 PM PT = 12:59 AM MST next calendar day
-
-The pipeline stop condition must use `America/Los_Angeles` (Kalshi's timezone), not `America/Phoenix`, to correctly stop at 23:58 PT in both seasons. This mirrors how CHI uses `America/New_York` rather than `America/Chicago`.
+This is simpler than CHI (which closes at 11:59 PM ET, a different timezone from local CT) and LAX (which closes at 11:59 PM PT, same as local). For PHX, local time *is* close time.
 
 ```python
-# pipeline.py stop condition
-KALSHI_CLOSE_TZ = ZoneInfo("America/Los_Angeles")
-now_close = now_utc.astimezone(KALSHI_CLOSE_TZ)
-if now_close.date() > today or (now_close.hour == 23 and now_close.minute >= 58):
+# pipeline.py stop condition — no separate KALSHI_CLOSE_TZ needed
+ARIZONA = ZoneInfo("America/Phoenix")
+today = dt.datetime.now(ARIZONA).date()
+...
+now_az = now_utc.astimezone(ARIZONA)
+if now_az.date() > today or (now_az.hour == 23 and now_az.minute >= 58):
     break
 ```
 
@@ -194,7 +195,7 @@ Only enable `--trade` after Step 7 confirms positive Layer 3 edge (consistent wi
 | HRRR grid point | 33.94°N, 118.39°W | 41.79°N, 87.75°W | 33.44°N, 112.01°W |
 | Local timezone | America/Los_Angeles | America/Chicago | America/Phoenix |
 | **DST** | **Yes** | **Yes** | **No (UTC-7 always)** |
-| Close-time TZ | America/Los_Angeles | America/New_York | America/Los_Angeles |
+| Close-time TZ | America/Los_Angeles | America/New_York | America/Phoenix (same as local) |
 | NWS office | LOX | LOT | PSR |
 | PFM PIL | PFMLOX | PFMLOT | PFMPSR |
 | Regime type | marine_layer | lake_breeze | monsoon |

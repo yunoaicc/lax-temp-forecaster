@@ -274,13 +274,12 @@ def today_event_ticker(target_date: dt.date | None = None) -> str:
 ```
 with:
 ```python
-_ARIZONA = ZoneInfo("America/Phoenix")
-_KALSHI_CLOSE_TZ = ZoneInfo("America/Los_Angeles")  # Kalshi states close time in PT
+_ARIZONA = ZoneInfo("America/Phoenix")   # UTC-7 year-round; close = 11:59 PM MST = local
 
 
 def today_event_ticker(target_date: dt.date | None = None) -> str:
-    """Return the Kalshi event ticker for a date, e.g. 'KXHIGHTPHX-26MAY24'.
-    PHX contracts close at 11:59 PM PT (America/Los_Angeles)."""
+    """Return the Kalshi event ticker for a date, e.g. 'KXHIGHTPHX-26MAY25'.
+    PHX contracts close at 11:59 PM local time (MST = America/Phoenix)."""
     d = target_date or dt.datetime.now(_ARIZONA).date()
     return f"KXHIGHTPHX-{d.strftime('%y')}{d.strftime('%b').upper()}{d.strftime('%d')}"
 ```
@@ -903,8 +902,7 @@ EASTERN = ZoneInfo("America/New_York")
 ```
 with:
 ```python
-KALSHI_CLOSE_TZ = ZoneInfo("America/Los_Angeles")   # Kalshi states close time in PT
-ARIZONA = ZoneInfo("America/Phoenix")               # local trading-day timezone
+ARIZONA = ZoneInfo("America/Phoenix")   # UTC-7 year-round; close = 11:59 PM MST = local
 ```
 
 Replace the stop condition block:
@@ -917,14 +915,14 @@ if now_et.date() > today or (now_et.hour == 23 and now_et.minute >= 58):
 ```
 with:
 ```python
-now_close = now_utc.astimezone(KALSHI_CLOSE_TZ)
-ts = now_close.strftime("%H:%M:%S PT")
+now_az = now_utc.astimezone(ARIZONA)
+ts = now_az.strftime("%H:%M:%S MST")
 
-# Stop just before midnight PT so the last snapshot is clean
-if now_close.date() > today or (now_close.hour == 23 and now_close.minute >= 58):
+# Stop just before midnight MST (local = close time for PHX contracts)
+if now_az.date() > today or (now_az.hour == 23 and now_az.minute >= 58):
 ```
 
-Find the line that determines `today` (likely near the top of `main()`). It probably references EASTERN. Change to use ARIZONA:
+Find the line that determines `today` (likely near the top of `main()`). Change to use ARIZONA:
 
 ```python
 today = args_date or dt.datetime.now(ARIZONA).date()
@@ -967,7 +965,7 @@ from phx_forecast.kalshi import KALSHI_API_BASE, KalshiAuth, _sign
 REPO = Path(__file__).resolve().parents[1]
 OUT = REPO / "data" / "processed" / "kalshi_kxhightphx_history.csv"
 DECISION_LEAD_H = 16
-CLOSE_TZ = ZoneInfo("America/Los_Angeles")
+CLOSE_TZ = ZoneInfo("America/Phoenix")   # close = 11:59 PM MST (local)
 ```
 
 Add `from zoneinfo import ZoneInfo` at the top if not present.

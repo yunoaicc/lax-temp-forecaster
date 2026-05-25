@@ -31,11 +31,13 @@ source "$VENV"
 
 # Backfill ASOS observed temperature running maxes for the completed trading day
 echo "Backfilling ASOS obs for $TRADING_DATE..."
-python scripts/backfill_asos_obs.py --start "$TRADING_DATE" --end "$TRADING_DATE"
+python scripts/backfill_asos_obs.py --start "$TRADING_DATE" --end "$TRADING_DATE" \
+    || echo "Warning: ASOS obs backfill failed, Layer 4 backtest will have a gap for $TRADING_DATE"
 
 # Update Kalshi LAHIGH settlement history
 echo "Fetching Kalshi history..."
-python scripts/fetch_kalshi_history.py
+python scripts/fetch_kalshi_history.py \
+    || echo "Warning: Kalshi history fetch failed, backtest P&L may be stale"
 
 # Refresh NCEI daily temperature history so tomorrow's calibrator sees today's actuals
 echo "Refreshing NCEI temperature history..."

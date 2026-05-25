@@ -48,6 +48,11 @@ echo "Backfilling HRRR for $TODAY..."
 python scripts/backfill_hrrr.py --start "$TODAY" --end "$TODAY" \
     || echo "Warning: HRRR backfill failed, pipeline will use Layer 2/1 fallback"
 
+# Backfill today's NWS PFM forecast — non-fatal; pipeline falls back to Layer 1 if missing
+echo "Backfilling PFM for $TODAY..."
+python scripts/backfill_pfm.py --start "$TODAY" --end "$TODAY" \
+    || echo "Warning: PFM backfill failed, pipeline will use Layer 1 fallback"
+
 # Classify today's marine-layer regime (06:00-09:00 PT METAR window now complete)
 echo "Backfilling regime for $TODAY..."
 python scripts/backfill_regimes_asos.py --start "$TODAY" --end "$TODAY" \

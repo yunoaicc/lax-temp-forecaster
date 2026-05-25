@@ -56,3 +56,6 @@ check_pipeline /home/boxd/lax-temp-forecaster America/Los_Angeles \
 
 check_pipeline /home/boxd/chi-temp-forecaster America/Chicago \
     /home/boxd/chi-temp-forecaster/scripts/daily_start.sh
+
+check_pipeline /home/boxd/phx-temp-forecaster America/Phoenix \
+    /home/boxd/phx-temp-forecaster/scripts/daily_start.sh

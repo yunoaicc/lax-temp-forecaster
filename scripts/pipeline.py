@@ -25,6 +25,7 @@ from __future__ import annotations
 import argparse
 import csv
 import datetime as dt
+import json
 import sys
 import time
 import uuid
@@ -202,11 +203,19 @@ def main() -> int:
     ap.add_argument("--min-edge", type=int, default=3, help="Min edge in cents to flag/trade.")
     ap.add_argument("--min-obs", type=int, default=20)
     ap.add_argument("--min-regime-obs", type=int, default=15)
-    ap.add_argument("--bankroll", type=float, default=1000.0, help="Total bankroll in dollars.")
+    ap.add_argument("--bankroll", type=float, default=5.0, help="Total bankroll in dollars.")
     ap.add_argument("--poll-interval", type=int, default=300, help="Seconds between polls.")
     ap.add_argument("--trade", action="store_true", help="Enable live order placement.")
     ap.add_argument("--date", default=None, help="Override today's date YYYY-MM-DD (testing).")
     args = ap.parse_args()
+
+    if args.trade and args.bankroll > 25:
+        print(
+            f"ERROR: --bankroll {args.bankroll:.0f} exceeds $25 safety cap while --trade is active. "
+            "Reduce bankroll or raise this guard intentionally in pipeline.py.",
+            file=sys.stderr,
+        )
+        return 1
 
     today = dt.date.fromisoformat(args.date) if args.date else dt.datetime.now(PACIFIC).date()
 
@@ -231,7 +240,14 @@ def main() -> int:
     event_ticker = today_event_ticker(today)
     snap_path = _snapshot_path(today)
     write_header = not snap_path.exists()
-    placed: set[tuple[str, str]] = set()  # (ticker, side) ordered this session
+    placed_path = SNAPSHOT_DIR / f"placed_orders_{today}.json"
+    placed: set[tuple[str, str]] = set()  # (ticker, side) ordered today
+    if placed_path.exists():
+        for entry in json.loads(placed_path.read_text()):
+            placed.add((entry[0], entry[1]))
+        if placed:
+            print(f"[startup] {len(placed)} order(s) already placed today — skipping duplicates",
+                  file=sys.stderr)
     cached_markets: list[dict] = []       # tickers + strikes (fetched once)
 
     print(f"Event: {event_ticker}  snapshot: {snap_path.relative_to(REPO)}", file=sys.stderr)
@@ -326,13 +342,14 @@ def main() -> int:
                     price_cents = 100 - int(r["yes_bid"])
                     count = max(1, int(r["stake"] * 100 / price_cents))
 
+                placed.add(key)
+                placed_path.write_text(json.dumps(sorted(placed)))
                 try:
                     resp = place_order(
                         str(r["ticker"]), side, count, price_cents,
                         client_order_id=str(uuid.uuid4()),
                         auth=auth,
                     )
-                    placed.add(key)
                     order_id = (resp.get("order") or {}).get("order_id", "?")
                     print(f"    ✅ ORDER: {r['ticker']} {side} x{count} @ {price_cents}¢  "
                           f"id={order_id}", file=sys.stderr)

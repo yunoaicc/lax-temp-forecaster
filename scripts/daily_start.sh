@@ -65,7 +65,7 @@ EXTRA_ARGS=()
 echo "Starting pipeline..."
 nohup python scripts/pipeline.py \
     --min-edge 5 \
-    --bankroll 1000 \
+    --bankroll 5 \
     --poll-interval 300 \
     "${EXTRA_ARGS[@]}" \
     >> "$LOG_DIR/pipeline_${TODAY}.log" 2>&1 &

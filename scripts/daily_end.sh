@@ -37,4 +37,9 @@ python scripts/backfill_asos_obs.py --start "$TRADING_DATE" --end "$TRADING_DATE
 echo "Fetching Kalshi history..."
 python scripts/fetch_kalshi_history.py
 
+# Refresh NCEI daily temperature history so tomorrow's calibrator sees today's actuals
+echo "Refreshing NCEI temperature history..."
+python -c "from lax_forecast.data import load_lax_history; load_lax_history(refresh=True)" \
+    || echo "Warning: NCEI history refresh failed, calibrator will use cached data"
+
 echo "daily_end.sh done."

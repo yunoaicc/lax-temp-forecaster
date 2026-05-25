@@ -34,7 +34,7 @@ fi
 # Pull latest code (ssh:// remote bypasses boxd's insteadOf rewrite; key is read-only deploy key)
 cd "$REPO"
 GIT_SSH_COMMAND="ssh -i $HOME/.ssh/github_deploy -o StrictHostKeyChecking=no" \
-    git pull --ff-only
+    git pull --ff-only || echo "Warning: git pull failed, continuing with current code"
 
 # Activate venv
 # shellcheck source=/dev/null

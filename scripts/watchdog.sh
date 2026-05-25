@@ -36,7 +36,8 @@ check_pipeline() {
     fi
 
     if [ ! -f "$pid_file" ]; then
-        echo "$(ts)  WARN  $repo_dir: no PID file for $today (daily_start.sh may not have run)"
+        echo "$(ts)  WARN  $repo_dir: no PID file for $today — triggering daily_start.sh"
+        bash "$start_script" &
         return
     fi
 

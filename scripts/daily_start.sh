@@ -40,13 +40,18 @@ GIT_SSH_COMMAND="ssh -i $HOME/.ssh/github_deploy -o StrictHostKeyChecking=no" \
 # shellcheck source=/dev/null
 source "$VENV"
 
-# Backfill today's HRRR members (pipeline won't start without them)
+# Ensure all required extras are installed (idempotent, fast when already installed)
+pip install -q -e "$REPO[hrrr,kalshi]" 2>/dev/null || true
+
+# Backfill today's HRRR members — non-fatal; pipeline falls back to Layer 2/1 if missing
 echo "Backfilling HRRR for $TODAY..."
-python scripts/backfill_hrrr.py --start "$TODAY" --end "$TODAY"
+python scripts/backfill_hrrr.py --start "$TODAY" --end "$TODAY" \
+    || echo "Warning: HRRR backfill failed, pipeline will use Layer 2/1 fallback"
 
 # Classify today's marine-layer regime (06:00-09:00 PT METAR window now complete)
 echo "Backfilling regime for $TODAY..."
-python scripts/backfill_regimes_asos.py --start "$TODAY" --end "$TODAY"
+python scripts/backfill_regimes_asos.py --start "$TODAY" --end "$TODAY" \
+    || echo "Warning: regime backfill failed, pipeline will use pooled prior"
 
 # Pipeline args — add "--trade" to EXTRA_ARGS to enable live order placement
 EXTRA_ARGS=()

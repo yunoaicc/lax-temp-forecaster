@@ -267,7 +267,7 @@ def main() -> int:
 
         # 1. Layer 4: condition on observed running max
         obs_max = fetch_observed_high(today, as_of=now_utc)
-        dist = condition_on_observed(layer3_dist, obs_max) if obs_max is not None else layer3_dist
+        dist = condition_on_observed(layer3_dist, obs_max, as_of=now_utc) if obs_max is not None else layer3_dist
 
         # 2. Discover today's market ladder (re-fetch each loop for fresh quotes)
         try:

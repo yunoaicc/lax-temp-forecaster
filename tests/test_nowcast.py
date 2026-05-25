@@ -127,6 +127,43 @@ def test_nowcast_conditions_on_fetched_value():
     assert np.allclose(out.probs, expected.probs)
 
 
+def test_condition_timed_post_peak_applies_ceiling():
+    """After peak_hour_pt, mass above obs + post_peak_margin should be zeroed."""
+    d = _dist([60, 61, 62, 63, 64, 65, 66], [1 / 7] * 7)
+    # 6pm PT = 02:00 UTC next day, well past peak_hour_pt=15
+    as_of = dt.datetime(2026, 6, 16, 2, 0, tzinfo=UTC)
+    c = nc.condition_on_observed(d, 62, as_of=as_of, peak_hour_pt=15, post_peak_margin_f=1.0)
+    assert c.p_between(64, 66) == pytest.approx(0.0)
+    assert c.p_between(62, 63) == pytest.approx(1.0)
+
+
+def test_condition_timed_before_peak_allows_rise():
+    """Before peak with generous runway, warm tail survives."""
+    d = _dist([60, 61, 62, 63, 64, 65, 66], [1 / 7] * 7)
+    # 8am PT = 15:00 UTC; 7 hours to peak_hour_pt=15, rise_rate=3 → ceiling=62+21=83
+    as_of = dt.datetime(2026, 6, 15, 15, 0, tzinfo=UTC)
+    c = nc.condition_on_observed(d, 62, as_of=as_of, peak_hour_pt=15, rise_rate_f_per_hour=3.0)
+    assert c.p_between(62, 66) == pytest.approx(1.0)
+
+
+def test_condition_timed_one_hour_to_peak():
+    """1 hour before peak with rise_rate=3 → ceiling at obs+3."""
+    d = _dist([60, 61, 62, 63, 64, 65, 66], [1 / 7] * 7)
+    # 2pm PT = 21:00 UTC (PDT is UTC-7, so 21:00 UTC = 2pm PT)
+    as_of = dt.datetime(2026, 6, 15, 21, 0, tzinfo=UTC)
+    c = nc.condition_on_observed(d, 62, as_of=as_of, peak_hour_pt=15, rise_rate_f_per_hour=3.0)
+    # Ceiling = 62 + 3*1 = 65; temp 66 should be zeroed
+    assert c.p_between(66, 66) == pytest.approx(0.0)
+    assert c.p_between(62, 65) == pytest.approx(1.0)
+
+
+def test_condition_no_as_of_unchanged_behavior():
+    """Without as_of, only the floor is applied (backward compat)."""
+    d = _dist([60, 61, 62, 63, 64, 65, 66], [1 / 7] * 7)
+    c = nc.condition_on_observed(d, 62)
+    assert c.p_between(63, 66) > 0.0
+
+
 def test_nowcast_unchanged_when_no_observations():
     d = _dist([60, 61, 62], [0.3, 0.4, 0.3])
 

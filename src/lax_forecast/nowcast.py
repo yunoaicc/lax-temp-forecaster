@@ -1,9 +1,10 @@
 """Layer 4a — intraday nowcast: condition the daily-high distribution on observations.
 
-The day's high cannot be below a temperature already observed today, so we truncate
-the distribution to temps >= the observed max and renormalize. Exact, no calibration.
-The time-of-day 'peak passed' tail decay and a full trajectory model are future
-extensions. Observations come from api.weather.gov; no extra dependency.
+The day's high cannot be below a temperature already observed today, so we apply a
+hard floor at the running max. When as_of is supplied we also impose a time-based
+ceiling: the distribution cannot reach temps > obs + max_rise, where max_rise shrinks
+linearly toward post_peak_margin_f as local time approaches peak_hour_pt, and equals
+post_peak_margin_f after the peak. Observations come from api.weather.gov.
 """
 from __future__ import annotations
 
@@ -22,18 +23,46 @@ USER_AGENT = "lax-temp-forecaster/0.1 (https://github.com/yunoaicc/lax-temp-fore
 PACIFIC = ZoneInfo("America/Los_Angeles")
 UTC = dt.timezone.utc
 
+# LAX high temps typically peak around 3pm PT (marine layer burns off by noon,
+# peak heating in early-to-mid afternoon).
+_DEFAULT_PEAK_HOUR_PT = 15
+_DEFAULT_RISE_RATE_F_PER_HOUR = 3.0
+_DEFAULT_POST_PEAK_MARGIN_F = 1.0
+
 
 def condition_on_observed(
-    dist: DistributionSummary, observed_high_f: float
+    dist: DistributionSummary,
+    observed_high_f: float,
+    *,
+    as_of: dt.datetime | None = None,
+    peak_hour_pt: int = _DEFAULT_PEAK_HOUR_PT,
+    rise_rate_f_per_hour: float = _DEFAULT_RISE_RATE_F_PER_HOUR,
+    post_peak_margin_f: float = _DEFAULT_POST_PEAK_MARGIN_F,
 ) -> DistributionSummary:
-    """Truncate to temps >= observed_high_f (inclusive) and renormalize.
+    """Condition on the observed running max with floor and optional time-based ceiling.
 
-    The daily high cannot be below an already-observed temperature, and it can equal
-    the running max. If truncation leaves zero mass (observed exceeds the prior's
-    effective support), return a point mass at round(observed_high_f)."""
+    Floor: mass below observed_high_f is zeroed (the daily high cannot fall below
+    an already-observed value).
+
+    Ceiling (requires as_of): mass above obs + max_rise is also zeroed, where
+    max_rise = rise_rate_f_per_hour * hours_remaining_to_peak when before peak,
+    and post_peak_margin_f after peak.
+
+    Returns a point mass at round(obs) if truncation leaves zero mass."""
     obs = float(observed_high_f)
     temps = np.asarray(dist.temps_f)
-    mask = temps >= obs
+
+    if as_of is not None:
+        as_of_aware = as_of if as_of.tzinfo else as_of.replace(tzinfo=UTC)
+        local = as_of_aware.astimezone(PACIFIC)
+        current_hour = local.hour + local.minute / 60.0
+        hours_remaining = max(0.0, peak_hour_pt - current_hour)
+        max_rise = hours_remaining * rise_rate_f_per_hour if hours_remaining > 0 else post_peak_margin_f
+        ceiling = obs + max_rise
+        mask = (temps >= obs) & (temps <= ceiling)
+    else:
+        mask = temps >= obs
+
     new_probs = np.where(mask, dist.probs, 0.0)
     total = float(new_probs.sum())
     if total <= 0.0:
@@ -103,4 +132,4 @@ def nowcast(
     observed = fetcher(target_date, as_of=as_of)
     if observed is None:
         return dist
-    return condition_on_observed(dist, observed)
+    return condition_on_observed(dist, observed, as_of=as_of)

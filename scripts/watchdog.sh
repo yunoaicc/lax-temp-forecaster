@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
-# Pipeline watchdog — runs every 30 min via cron, restarts dead pipelines.
+# Pipeline watchdog — runs every 15 min via cron + on reboot, restarts dead pipelines.
 #
-# Cron: */30 * * * * /home/boxd/lax-temp-forecaster/scripts/watchdog.sh
+# Cron: */15 * * * * /home/boxd/lax-temp-forecaster/scripts/watchdog.sh
+#       @reboot sleep 60 && /home/boxd/lax-temp-forecaster/scripts/watchdog.sh
 #
-# Checks both LAX and CHI pipelines. For each:
-#   - If pipeline PID file missing: skip (daily_start.sh hasn't run yet today).
+# Checks LAX, CHI, and PHX pipelines. For each:
+#   - If pipeline PID file missing: start via daily_start.sh (boot recovery).
 #   - If PID file exists but process dead AND inside trading hours: restart.
 #   - Trading hours = 06:00–23:50 in each city's local timezone.
 

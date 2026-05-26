@@ -60,3 +60,6 @@ check_pipeline /home/boxd/chi-temp-forecaster America/Chicago \
 
 check_pipeline /home/boxd/phx-temp-forecaster America/Phoenix \
     /home/boxd/phx-temp-forecaster/scripts/daily_start.sh
+
+check_pipeline /home/boxd/den-temp-forecaster America/Denver \
+    /home/boxd/den-temp-forecaster/scripts/daily_start.sh

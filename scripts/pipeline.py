@@ -277,6 +277,10 @@ def main() -> int:
         if placed:
             print(f"[startup] {len(placed)} order(s) already placed today — skipping duplicates",
                   file=sys.stderr)
+    # Hard daily-spend cap (= --bankroll dollars/day). Reconstruct dollars already
+    # committed today (count * price) so the cap survives pipeline restarts mid-day.
+    budget_cents = int(round(args.bankroll * 100))
+    daily_spent_cents = sum(int(e.get("c", 0)) * int(e.get("p", 0)) for e in placed_entries)
     cached_markets: list[dict] = []       # tickers + strikes (fetched once)
 
     print(f"Event: {event_ticker}  snapshot: {snap_path.relative_to(REPO)}", file=sys.stderr)
@@ -392,17 +396,28 @@ def main() -> int:
                 side = str(r["side"])
                 if side == "buy":
                     price_cents = int(r["yes_ask"])
-                    count = max(1, int(r["stake"] * 100 / price_cents))
                 else:
                     price_cents = 100 - int(r["yes_bid"])
-                    count = max(1, int(r["stake"] * 100 / price_cents))
+                if price_cents <= 0:
+                    continue
+                count = max(1, int(r["stake"] * 100 / price_cents))
 
-                entry = {"t": str(r["ticker"]), "s": side, "p": price_cents,
+                # Hard daily cap: shrink to fit remaining budget; skip if <1 contract affordable.
+                remaining_cents = budget_cents - daily_spent_cents
+                if remaining_cents < price_cents:
+                    print(f"    \u26d4 daily ${args.bankroll:.2f} budget reached "
+                          f"(${daily_spent_cents/100:.2f} committed) \u2014 skipping {r['ticker']} {side}",
+                          file=sys.stderr)
+                    continue
+                count = int(min(count, remaining_cents // price_cents))
+
+                entry = {"t": str(r["ticker"]), "s": side, "p": price_cents, "c": count,
                          "ts": now_utc.isoformat(timespec="seconds")}
                 placed.add(key)
                 placed_entries.append(entry)
                 placed_price_map[key] = entry
                 placed_path.write_text(json.dumps(placed_entries))
+                daily_spent_cents += count * price_cents
                 try:
                     resp = place_order(
                         str(r["ticker"]), side, count, price_cents,

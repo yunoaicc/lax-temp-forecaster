@@ -59,13 +59,13 @@ python scripts/backfill_regimes_asos.py --start "$TODAY" --end "$TODAY" \
     || echo "Warning: regime backfill failed, pipeline will use pooled prior"
 
 # Pipeline args — add "--trade" to EXTRA_ARGS to enable live order placement
-EXTRA_ARGS=()
+EXTRA_ARGS=(--trade)
 # EXTRA_ARGS=(--trade)
 
 echo "Starting pipeline..."
 nohup python scripts/pipeline.py \
     --min-edge 5 \
-    --bankroll 5 \
+    --bankroll 1 \
     --poll-interval 300 \
     "${EXTRA_ARGS[@]}" \
     >> "$LOG_DIR/pipeline_${TODAY}.log" 2>&1 &

@@ -105,19 +105,14 @@ def main() -> int:
                 print(f"{target}: {ens.n_members} members (mean {ens.mean:.1f} F)", file=sys.stderr)
             except LookupError as exc:
                 print(f"{target}: skipped ({exc})", file=sys.stderr)
-        # Regime is cheap and independent of the (possibly cached) ensemble.
-        if target.isoformat() not in have_regimes:
-            try:
-                r = detect_regime(target)
-                if r is not None:
-                    _save_regime(target, r)
-            except Exception as exc:  # noqa: BLE001
-                print(f"{target}: regime skipped ({exc})", file=sys.stderr)
+        # NOTE: regime writing removed — the marine-layer regime is now VISIBILITY-based
+        # and owned by backfill_regimes_asos.py / gen_visibility_regimes.py. This script
+        # must NOT write hrrr_regimes.csv (the old cloud detect_regime would pollute the
+        # lowvis/clearvis vocabulary with stratus/clear labels).
         if (i + 1) % 10 == 0:
             print(f"  ... {i + 1}/{len(dates)} dates, {total} members", file=sys.stderr)
 
     print(f"Backfill complete: {total} members -> {DEFAULT_MEMBER_CACHE}", file=sys.stderr)
-    print(f"Regimes -> {REGIME_CACHE}", file=sys.stderr)
     return 0
 
 

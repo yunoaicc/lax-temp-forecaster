@@ -55,6 +55,13 @@ PACIFIC = ZoneInfo("America/Los_Angeles")
 UTC = dt.timezone.utc
 SNAPSHOT_DIR = REPO / "data" / "live"
 REGIME_CACHE = Path(DEFAULT_MEMBER_CACHE).parent / "hrrr_regimes.csv"
+PEAK_HOUR_PT = 15         # 3 PM PT — after this, obs_max is unlikely to rise further
+EXIT_FAIR_THRESHOLD = 3   # ¢ — log "would exit" when our fair value drops below this
+
+EXIT_LOG_FIELDS = [
+    "ts_utc", "ticker", "side", "entry_price_cents", "entry_ts_utc",
+    "current_fair_cents", "market_bid_cents", "hours_post_peak", "would_save_cents",
+]
 
 SNAPSHOT_FIELDS = [
     "ts_utc", "ts_pt", "obs_max_f",
@@ -185,6 +192,19 @@ def _log_snapshot(path: Path, rows: list[dict], *, write_header: bool) -> None:
         w.writerows(rows)
 
 
+def _exit_log_path(today: dt.date) -> Path:
+    SNAPSHOT_DIR.mkdir(parents=True, exist_ok=True)
+    return SNAPSHOT_DIR / f"exit_log_{today}.csv"
+
+
+def _log_exit(path: Path, rows: list[dict], *, write_header: bool) -> None:
+    with path.open("a", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=EXIT_LOG_FIELDS, extrasaction="ignore")
+        if write_header:
+            w.writeheader()
+        w.writerows(rows)
+
+
 def _print_edges(flagged: pd.DataFrame, obs_max: float | None, ts: str) -> None:
     n = len(flagged)
     print(f"  {ts} | obs_max={obs_max}°F | {n} edge{'s' if n != 1 else ''}", file=sys.stderr)
@@ -241,10 +261,19 @@ def main() -> int:
     snap_path = _snapshot_path(today)
     write_header = not snap_path.exists()
     placed_path = SNAPSHOT_DIR / f"placed_orders_{today}.json"
-    placed: set[tuple[str, str]] = set()  # (ticker, side) ordered today
+    placed: set[tuple[str, str]] = set()
+    placed_entries: list[dict] = []
+    placed_price_map: dict[tuple[str, str], dict] = {}
     if placed_path.exists():
         for entry in json.loads(placed_path.read_text()):
-            placed.add((entry[0], entry[1]))
+            if isinstance(entry, dict):
+                t, s = entry["t"], entry["s"]
+            else:
+                t, s = entry[0], entry[1]
+                entry = {"t": t, "s": s, "p": 0, "ts": ""}
+            placed.add((t, s))
+            placed_entries.append(entry)
+            placed_price_map[(t, s)] = entry
         if placed:
             print(f"[startup] {len(placed)} order(s) already placed today — skipping duplicates",
                   file=sys.stderr)
@@ -327,7 +356,33 @@ def main() -> int:
         _log_snapshot(snap_path, df.to_dict("records"), write_header=write_header)
         write_header = False
 
-        # 6. Place bets (only if --trade and new edges found)
+        # 6. Exit logging — read-only, never actually sells.
+        now_pt = now_utc.astimezone(PACIFIC)
+        if placed_price_map and now_pt.hour >= PEAK_HOUR_PT:
+            hours_post_peak = (now_pt.hour - PEAK_HOUR_PT) + now_pt.minute / 60
+            fair_map = {str(row["ticker"]): row for _, row in df.iterrows()}
+            exit_rows = []
+            for (ticker, side), entry in placed_price_map.items():
+                r = fair_map.get(ticker)
+                if r is None or int(r["fair_cents"]) >= EXIT_FAIR_THRESHOLD:
+                    continue
+                market_bid = int(r["yes_bid"]) if side == "buy" else 100 - int(r["yes_ask"])
+                exit_rows.append({
+                    "ts_utc": now_utc.isoformat(timespec="seconds"),
+                    "ticker": ticker,
+                    "side": side,
+                    "entry_price_cents": entry["p"],
+                    "entry_ts_utc": entry["ts"],
+                    "current_fair_cents": int(r["fair_cents"]),
+                    "market_bid_cents": market_bid,
+                    "hours_post_peak": round(hours_post_peak, 2),
+                    "would_save_cents": entry["p"] - market_bid,
+                })
+            if exit_rows:
+                epath = _exit_log_path(today)
+                _log_exit(epath, exit_rows, write_header=not epath.exists())
+
+        # 7. Place bets (only if --trade and new edges found)
         if args.trade and len(flagged):
             for _, r in flagged.iterrows():
                 key = (str(r["ticker"]), str(r["side"]))
@@ -342,8 +397,12 @@ def main() -> int:
                     price_cents = 100 - int(r["yes_bid"])
                     count = max(1, int(r["stake"] * 100 / price_cents))
 
+                entry = {"t": str(r["ticker"]), "s": side, "p": price_cents,
+                         "ts": now_utc.isoformat(timespec="seconds")}
                 placed.add(key)
-                placed_path.write_text(json.dumps(sorted(placed)))
+                placed_entries.append(entry)
+                placed_price_map[key] = entry
+                placed_path.write_text(json.dumps(placed_entries))
                 try:
                     resp = place_order(
                         str(r["ticker"]), side, count, price_cents,

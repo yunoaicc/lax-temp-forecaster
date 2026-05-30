@@ -84,7 +84,11 @@ def score_against_market(
         recs = []
         for (_, m), mid in zip(day.iterrows(), mids):
             fp = strike_prob(dist, m["floor_strike"], m["cap_strike"])
-            win = strike_win(actual, m["floor_strike"], m["cap_strike"])
+            # Trust the CSV's kalshi_result when present (authoritative Kalshi
+            # settlement). Falling back to actual_map exposed a +1d
+            # date-misalignment bug that silently invented ~+800% backtest edge.
+            kr = str(m.get("kalshi_result", "")).strip().lower() if "kalshi_result" in m else ""
+            win = (kr == "yes") if kr in ("yes", "no") else strike_win(actual, m["floor_strike"], m["cap_strike"])
             recs.append({
                 "fair_prob": fp, "fair_cents": 100.0 * fp,
                 "yes_bid": float(m["yes_bid_c"]), "yes_ask": float(m["yes_ask_c"]),

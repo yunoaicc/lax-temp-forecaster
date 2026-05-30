@@ -52,11 +52,17 @@ check_pipeline() {
     fi
 }
 
-check_pipeline /home/boxd/lax-temp-forecaster America/Los_Angeles \
-    /home/boxd/lax-temp-forecaster/scripts/daily_start.sh
-
-check_pipeline /home/boxd/chi-temp-forecaster America/Chicago \
-    /home/boxd/chi-temp-forecaster/scripts/daily_start.sh
+# PHX is in a 30-day NBM-only forward test (2026-05-30 → 2026-06-29).
+# LAX/CHI/DEN are paused. The check_pipeline lines for LAX/CHI are commented
+# out because their absent PID files would otherwise trigger daily_start.sh
+# (the "no PID file → launch" branch above), unpausing them. Re-enable by
+# uncommenting if/when those cities resume.
+#
+#check_pipeline /home/boxd/lax-temp-forecaster America/Los_Angeles \
+#    /home/boxd/lax-temp-forecaster/scripts/daily_start.sh
+#
+#check_pipeline /home/boxd/chi-temp-forecaster America/Chicago \
+#    /home/boxd/chi-temp-forecaster/scripts/daily_start.sh
 
 check_pipeline /home/boxd/phx-temp-forecaster America/Phoenix \
     /home/boxd/phx-temp-forecaster/scripts/daily_start.sh

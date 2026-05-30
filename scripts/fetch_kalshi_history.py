@@ -25,6 +25,24 @@ REPO = Path(__file__).resolve().parents[1]
 OUT = REPO / "data" / "processed" / "kalshi_lahigh_history.csv"
 DECISION_LEAD_H = 16  # sample bid/ask this many hours before close_time
 
+_MONTHS = {"JAN": 1, "FEB": 2, "MAR": 3, "APR": 4, "MAY": 5, "JUN": 6,
+           "JUL": 7, "AUG": 8, "SEP": 9, "OCT": 10, "NOV": 11, "DEC": 12}
+
+
+def _date_from_event_ticker(event_ticker: str | None) -> str | None:
+    """Kalshi event tickers (KXHIGHLAX-YYMMMDD) name the day the market
+    settles on. This is authoritative — do NOT derive measurement_date from
+    close_dt arithmetic; markets that close at local midnight land on the
+    next calendar day under that conversion (silent +1d backtest bug)."""
+    if not event_ticker:
+        return None
+    try:
+        tail = event_ticker.rsplit("-", 1)[1]
+        yy, mmm, dd = int(tail[0:2]), tail[2:5].upper(), int(tail[5:7])
+        return dt.date(2000 + yy, _MONTHS[mmm], dd).isoformat()
+    except (KeyError, ValueError, IndexError):
+        return None
+
 
 def _get(session: requests.Session, auth: KalshiAuth, path: str) -> dict:
     ts = str(int(time.time() * 1000))
@@ -98,7 +116,7 @@ def main() -> int:
         rows.append({
             "event": m.get("event_ticker"),
             "ticker": tk,
-            "measurement_date": (close_dt - dt.timedelta(hours=8)).date().isoformat(),
+            "measurement_date": _date_from_event_ticker(m.get("event_ticker")),
             "floor_strike": m.get("floor_strike"),
             "cap_strike": m.get("cap_strike"),
             "yes_sub_title": m.get("yes_sub_title") or m.get("subtitle"),

@@ -65,6 +65,7 @@ EXTRA_ARGS=(--trade)
 echo "Starting pipeline..."
 nohup python scripts/pipeline.py \
     --min-edge 5 \
+    --min-yes-price 15 \
     --bankroll 1 \
     --poll-interval 300 \
     "${EXTRA_ARGS[@]}" \

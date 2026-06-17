@@ -221,6 +221,7 @@ def _print_edges(flagged: pd.DataFrame, obs_max: float | None, ts: str) -> None:
 def main() -> int:
     ap = argparse.ArgumentParser(description="Continuous LAHIGH intraday trading pipeline.")
     ap.add_argument("--min-edge", type=int, default=3, help="Min edge in cents to flag/trade.")
+    ap.add_argument("--min-yes-price", type=int, default=0, help="Skip BUYING YES below this price in cents; 0=off. Longshot floor.")
     ap.add_argument("--min-obs", type=int, default=20)
     ap.add_argument("--min-regime-obs", type=int, default=15)
     ap.add_argument("--bankroll", type=float, default=5.0, help="Total bankroll in dollars.")
@@ -353,6 +354,8 @@ def main() -> int:
         df = add_edges(df, min_edge_cents=args.min_edge)
         df = add_kelly_sizes(df, bankroll=args.bankroll, fraction=0.5, max_fraction=0.25)
         flagged = df[df["flagged"]]
+        if args.min_yes_price > 0:  # longshot floor: skip cheap YES buys (0/60 win historically)
+            flagged = flagged[~((flagged["side"] == "buy") & (flagged["yes_ask"] < args.min_yes_price))]
 
         _print_edges(flagged, obs_max, ts)
 
